@@ -58,17 +58,18 @@ Graph Sbm::generateSbm() {
        graph.nodes[i].label = labelDistribution(rng);
     }
 
+    // TODO: Needs to be streaming
     // Iterate over all pairs of vertices
     for (int u = 0; u < numberNodes; ++u) {
         for (int v = u + 1; v < numberNodes; ++v) {
             // Get the label of u and v
             int labelU = graph.nodes[u].label;
             int labelV = graph.nodes[v].label;
-            
+
             // Generate a random number to decide if an edge exists
             std::uniform_real_distribution<double> probDistribution(0.0, 1.0);
             double randomValue = probDistribution(rng);
-            
+
             // Check if the random value is less than the probability given by W
             if (randomValue < W[labelU][labelV]) {
                 graph.nodes[u].edgeList.push_back(v);
