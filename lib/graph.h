@@ -12,9 +12,8 @@ class Node {
     public:
         int id;
         int label;
-        vector<int> edgeList; // TODO: Change to Edge
 
-        Node(int id, vector<int> edgeList);
+        Node(int id);
         ~Node();
 };
 
@@ -24,10 +23,12 @@ class Graph {
         ~Graph();
 
         vector<Node> nodes;
+        vector<vector<int>> adjacencyMatrix;
 
         void draw(const string &filename);
         string getEdgeColor(int srcLabel, int destLabel);
         string getNodeColor(int nodeLabel);
+        int getTotalEdges();
 };
 
 #endif // GRAPH_H

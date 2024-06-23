@@ -26,7 +26,7 @@ void Sbm::generateProbabilityDistribution() {
 
     // Normalize to ensure the sum of probabilities is 1
     for (int i = 0; i < numberCommunities; ++i) {
-        p[i] = round((p[i]*100.0)/sum)/100;
+        p[i] = round((p[i] * 100.0) / sum) / 100;
     }
 }
 
@@ -36,7 +36,7 @@ void Sbm::generateProbabilityMatrix() {
 
     W.resize(numberCommunities, vector<double>(numberCommunities));
     for (int i = 0; i < numberCommunities; ++i) {
-        for(int j = 0; j < numberCommunities; ++j) {
+        for (int j = 0; j < numberCommunities; ++j) {
             W[i][j] = dist(rng);
             W[j][i] = W[i][j]; // Ensure symmetry
         }
@@ -55,7 +55,7 @@ Graph Sbm::generateSbm() {
 
     // Assign labels to vertices
     for (int i = 0; i < numberNodes; ++i) {
-       graph.nodes[i].label = labelDistribution(rng);
+        graph.nodes[i].label = labelDistribution(rng);
     }
 
     // TODO: Needs to be streaming
@@ -67,13 +67,13 @@ Graph Sbm::generateSbm() {
             int labelV = graph.nodes[v].label;
 
             // Generate a random number to decide if an edge exists
-            std::uniform_real_distribution<double> probDistribution(0.0, 1.0);
+            uniform_real_distribution<double> probDistribution(0.0, 1.0);
             double randomValue = probDistribution(rng);
 
             // Check if the random value is less than the probability given by W
             if (randomValue < W[labelU][labelV]) {
-                graph.nodes[u].edgeList.push_back(v);
-                graph.nodes[v].edgeList.push_back(u); // Since the graph is undirected
+                graph.adjacencyMatrix[u][v] = 1;
+                graph.adjacencyMatrix[v][u] = 1; // Since the graph is undirected
             }
         }
     }

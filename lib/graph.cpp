@@ -5,15 +5,15 @@
 #include <graphviz/gvc.h>
 #include <map>
 
-Node::Node(int id, vector<int> edgeList): id(id), label(-1), edgeList(edgeList) {}
+Node::Node(int id): id(id), label(-1) {}
 
 Node::~Node() {
     // Nothing to clean
 }
 
-Graph::Graph(int numberNodes) {
+Graph::Graph(int numberNodes): adjacencyMatrix(numberNodes, vector<int>(numberNodes, 0)) {
     for (int i = 0; i < numberNodes; ++i) {
-        nodes.emplace_back(i, vector<int>());
+        nodes.emplace_back(i);
     }
 }
 
@@ -33,7 +33,7 @@ void Graph::draw(const string &filename) {
 
     // Create subgraphs for each label
     for (const auto &node: nodes) {
-        if(subgraph_map.find(node.label) == subgraph_map.end()) {
+        if (subgraph_map.find(node.label) == subgraph_map.end()) {
             string subgraph_name = "cluster_" + to_string(node.label);
             Agraph_t *subgraph = agsubg(g, const_cast<char*>(subgraph_name.c_str()), 1);
             subgraph_map[node.label] = subgraph;
@@ -42,7 +42,7 @@ void Graph::draw(const string &filename) {
 
     // Add nodes to the subgraphs in Graphviz
     for (const auto &node: nodes) {
-        string  node_name = to_string(node.id);
+        string node_name = to_string(node.id);
         Agraph_t *subgraph = subgraph_map[node.label];
         Agnode_t *agnod = agnode(subgraph, const_cast<char*>(to_string(node.id).c_str()), 1);
         agnode_map[node.id] = agnod;
@@ -56,16 +56,18 @@ void Graph::draw(const string &filename) {
     }
 
     // Create edges in Graphviz
-    for (const auto &src_node: nodes) {
-        Agnode_t *agnode_src = agnode_map[src_node.id];
-        for (int edge_dest: src_node.edgeList) {
-            Agnode_t *agnode_dest = agnode_map[edge_dest];
-            Agedge_t *edge = agedge(g, agnode_src, agnode_dest, NULL, 1);
+    for (int i = 0; i < adjacencyMatrix.size(); ++i) {
+        Agnode_t *agnode_src = agnode_map[i];
+        for (int j = i + 1; j < adjacencyMatrix[i].size(); ++j) {
+            if (adjacencyMatrix[i][j] == 1) {
+                Agnode_t *agnode_dest = agnode_map[j];
+                Agedge_t *edge = agedge(g, agnode_src, agnode_dest, NULL, 1);
 
-            string edge_color = getEdgeColor(src_node.label, nodes[edge_dest].label);
+                string edge_color = getEdgeColor(nodes[i].label, nodes[j].label);
 
-            // Set edge color
-            agsafeset(edge, const_cast<char*>("color"), const_cast<char*>(edge_color.c_str()), const_cast<char*>(""));
+                // Set edge color
+                agsafeset(edge, const_cast<char*>("color"), const_cast<char*>(edge_color.c_str()), const_cast<char*>(""));
+            }
         }
     }
 
@@ -101,4 +103,14 @@ string Graph::getNodeColor(int nodeLabel) {
         // Default color if the label is out of range
         return "#808080"; // Grey color in hex
     }
+}
+
+int Graph::getTotalEdges() {
+    int edgeCount = 0;
+    for (const auto &row: adjacencyMatrix) {
+        for (int val: row) {
+            edgeCount += val;
+        }
+    }
+    return edgeCount/2;
 }
