@@ -11,6 +11,10 @@ Node::~Node() {
     // Nothing to clean
 }
 
+int Node::getLabel() const {
+    return label;
+}
+
 Graph::Graph(int numberNodes): adjacencyMatrix(numberNodes, vector<int>(numberNodes, 0)) {
     for (int i = 0; i < numberNodes; ++i) {
         nodes.emplace_back(i);
@@ -59,7 +63,7 @@ void Graph::draw(const string &filename) {
     for (int i = 0; i < adjacencyMatrix.size(); ++i) {
         Agnode_t *agnode_src = agnode_map[i];
         for (int j = i + 1; j < adjacencyMatrix[i].size(); ++j) {
-            if (adjacencyMatrix[i][j] == 1) {
+            if (adjacencyMatrix[i][j] > 0) {
                 Agnode_t *agnode_dest = agnode_map[j];
                 Agedge_t *edge = agedge(g, agnode_src, agnode_dest, NULL, 1);
 
@@ -113,4 +117,73 @@ int Graph::getTotalEdges() {
         }
     }
     return edgeCount/2;
+}
+
+const Node& Graph::getNode(int nodeId) const {
+    return nodes[nodeId];
+}
+
+void Graph::addEdge(int srcNode, int destNode, int edgeWeight) {
+    // TODO: Need to probability randomness
+    adjacencyMatrix[srcNode][destNode] += edgeWeight;
+    adjacencyMatrix[destNode][srcNode] += edgeWeight; // Since the graph is undirected
+}
+
+void Graph::removeEdge(int srcNode, int destNode) {
+    // TODO: same as addEdge
+    adjacencyMatrix[srcNode][destNode] = 0;
+    adjacencyMatrix[destNode][srcNode] = 0; // Since the graph is undirected
+}
+
+void Graph::addNode(int nodeId, int nodeLabel) {
+    Node node = Node(nodeId);
+    node.label = nodeLabel;
+    nodes.push_back(node);
+
+    // Update the edge matrix to reflect edges of the new node
+    adjacencyMatrix.resize(nodes.size(), vector<int>(nodes.size(), 0));
+    for (int i = 0; i < nodes.size(); ++i) {
+        adjacencyMatrix[i].resize(nodes.size(), 0);
+    }
+
+    // Adjust id to index mapping
+    for (int i = 0; i < nodes.size(); ++i) {
+        id_to_idx_mapping[nodes[i].id] = i;
+    }
+}
+
+void Graph::removeNode(int nodeId) {
+    // Remove node from list
+    nodes.erase(nodes.begin() + nodeId);
+
+    // Remove edge row
+    adjacencyMatrix.erase(adjacencyMatrix.begin() + nodeId);
+
+    // Remove edge column
+    for (auto& row: adjacencyMatrix) {
+        row.erase(row.begin() + nodeId);
+    }
+
+    // Adjust id to index mapping
+    for (int i = 0; i < nodes.size(); ++i) {
+        id_to_idx_mapping[nodes[i].id] = i;
+    }
+}
+
+bool Graph::hasNode(int nodeId) {
+    for (const Node& existing_node: nodes) {
+        if (existing_node.id == nodeId) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int Graph::getIdFromIdx(int idx) {
+    for (auto& pair: id_to_idx_mapping) {
+        if (pair.second == idx) {
+            return pair.first;
+        }
+    }
+    return -1;
 }

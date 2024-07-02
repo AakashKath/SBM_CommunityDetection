@@ -2,6 +2,7 @@
 #include <cstring>
 #include "lib/defaults.h"
 #include "lib/sbm.h"
+#include "lib/dynamic_community_detection.h"
 
 using namespace std;
 
@@ -50,7 +51,14 @@ int main(int argc, char* argv[]) {
     // TODO: Need to use community probability vector and edge connection matrix
     // Can also just ask for inter and intra community probabilities
     Sbm sbm(nodes, communities);
-    sbm.sbm_graph.draw("output.png");
-    cout << "Graph generated" << endl;
+
+    // TODO: Should be dynamic
+    vector<pair<int, int>> addedEdges = {{0, 1}, {1, 2}, {5, 7}, {9, 10}};
+    vector<pair<int, int>> removedEdges = {{0, 1}};
+
+    DynamicCommunityDetection dcd(sbm.sbm_graph, addedEdges, removedEdges);
+    dcd.run();
+    dcd.getPredictedLabels();
+    // sbm.sbm_graph.draw("output.png");
     return 0;
 }
