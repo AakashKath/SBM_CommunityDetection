@@ -13,10 +13,11 @@ class Node {
     public:
         int id;
         int label;
+        int bpLabel;
+        int dcdLabel;
 
         Node(int id);
         ~Node();
-        int getLabel() const;
 };
 
 class Graph {

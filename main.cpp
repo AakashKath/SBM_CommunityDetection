@@ -3,6 +3,7 @@
 #include "lib/defaults.h"
 #include "lib/sbm.h"
 #include "lib/dynamic_community_detection.h"
+#include "lib/belief_propagation.h"
 
 using namespace std;
 
@@ -19,6 +20,7 @@ void displayHelp() {
 int main(int argc, char* argv[]) {
     int nodes = DEFAULT_NODES;
     int communities = DEFAULT_COMMUNITIES;
+    int radius = DEFAULT_RADIUS;
 
     // Parse command-line arguments
     for (int i = 1; i < argc; ++i) {
@@ -51,14 +53,22 @@ int main(int argc, char* argv[]) {
     // TODO: Need to use community probability vector and edge connection matrix
     // Can also just ask for inter and intra community probabilities
     Sbm sbm(nodes, communities);
+    // sbm.sbm_graph.draw("output.png");
 
     // TODO: Should be dynamic
-    vector<pair<int, int>> addedEdges = {{0, 1}, {1, 2}, {5, 7}, {9, 10}};
-    vector<pair<int, int>> removedEdges = {{0, 1}};
+    // vector<pair<int, int>> addedEdges = {{0, 1}, {1, 2}, {5, 7}, {9, 10}};
+    // vector<pair<int, int>> removedEdges = {{0, 1}};
 
-    DynamicCommunityDetection dcd(sbm.sbm_graph, addedEdges, removedEdges);
-    dcd.run();
-    dcd.getPredictedLabels();
-    // sbm.sbm_graph.draw("output.png");
+    // DynamicCommunityDetection dcd(sbm.sbm_graph, addedEdges, removedEdges);
+    // dcd.run();
+    // dcd.getPredictedLabels();
+
+    BeliefPropagation bp(sbm.sbm_graph, communities, radius);
+    bp.run();
+    vector<int> labels = bp.getCommunityLabels();
+    for (int i = 0; i < labels.size(); ++i) {
+        cout << "Node: " << i << " Community: " << labels[i] << endl;
+    }
+
     return 0;
 }

@@ -11,10 +11,6 @@ Node::~Node() {
     // Nothing to clean
 }
 
-int Node::getLabel() const {
-    return label;
-}
-
 Graph::Graph(int numberNodes): adjacencyMatrix(numberNodes, vector<int>(numberNodes, 0)) {
     for (int i = 0; i < numberNodes; ++i) {
         nodes.emplace_back(i);
@@ -120,6 +116,7 @@ int Graph::getTotalEdges() {
 }
 
 const Node& Graph::getNode(int nodeId) const {
+    // TODO: Change this to use for loop over ids
     return nodes[nodeId];
 }
 
@@ -135,9 +132,11 @@ void Graph::removeEdge(int srcNode, int destNode) {
     adjacencyMatrix[destNode][srcNode] = 0; // Since the graph is undirected
 }
 
+// TODO: Make this function generic for usability in other functions
 void Graph::addNode(int nodeId, int nodeLabel) {
     Node node = Node(nodeId);
-    node.label = nodeLabel;
+    // For now addNode is being used only in dynamicCommunityDetection
+    node.dcdLabel = nodeLabel;
     nodes.push_back(node);
 
     // Update the edge matrix to reflect edges of the new node

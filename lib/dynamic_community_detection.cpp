@@ -18,13 +18,14 @@ void DynamicCommunityDetection::init() {
 
 void DynamicCommunityDetection::initialPartition() {
     for (Node node: c_aux.nodes) {
-        node.label = node.id;
+        node.dcdLabel = node.id;
     }
 }
 
 void DynamicCommunityDetection::run() {
     int m = 1, n = 1;
     vector<pair<int, int>> changed_nodes;
+    // TODO: Change to do while
     while (mod >= old_mod || m <= addedEdges.size() || n <= removedEdges.size()) {
         changed_nodes = oneLevel();
         updateCommunities(changed_nodes);
@@ -68,7 +69,7 @@ double DynamicCommunityDetection::modularity(Graph& auxiliary_graph) {
 
     for (int i = 0; i < nodes.size(); ++i) {
         for (int j = 0; j < nodes.size(); ++j) {
-            if (nodes[i].label == nodes[j].label) {
+            if (nodes[i].dcdLabel == nodes[j].dcdLabel) {
                 q += (graph.adjacencyMatrix[i][j] - (degrees[i] * degrees[j]) / (2.0 * m));
             }
         }
@@ -87,7 +88,7 @@ vector<pair<int, int>> DynamicCommunityDetection::oneLevel() {
     shuffle(nodes.begin(), nodes.end(), g);
 
     for (int node : nodes) {
-        int current_community = c_aux.nodes[node].label;
+        int current_community = c_aux.nodes[node].dcdLabel;
         int best_community = current_community;
         double max_modularity_gain = numeric_limits<double>::lowest();
         double initial_modularity = modularity(c_aux);
@@ -97,13 +98,13 @@ vector<pair<int, int>> DynamicCommunityDetection::oneLevel() {
         for (size_t i = 0; i < graph.adjacencyMatrix[node].size(); ++i) {
             int neighbor = graph.adjacencyMatrix[node][i];
             if (neighbor > 0) {
-                neighboring_communities.insert(c_aux.nodes[i].label);
+                neighboring_communities.insert(c_aux.nodes[i].dcdLabel);
             }
         }
 
         for (int community : neighboring_communities) {
             // Add node to the new community
-            c_aux.nodes[node].label = community;
+            c_aux.nodes[node].dcdLabel = community;
 
             double modularity_gain = modularity(c_aux) - initial_modularity;
 
@@ -114,7 +115,7 @@ vector<pair<int, int>> DynamicCommunityDetection::oneLevel() {
         }
 
         // Move node to the best community found
-        c_aux.nodes[node].label = best_community;
+        c_aux.nodes[node].dcdLabel = best_community;
 
         if (best_community != current_community) {
             moved = true;
@@ -127,23 +128,23 @@ vector<pair<int, int>> DynamicCommunityDetection::oneLevel() {
 
 void DynamicCommunityDetection::updateCommunities(const vector<pair<int, int>>& changed_nodes) {
     for (const auto& node_pair : changed_nodes) {
-        c_ll.nodes[node_pair.first].label = node_pair.second;
+        c_ll.nodes[node_pair.first].dcdLabel = node_pair.second;
     }
 }
 
 void DynamicCommunityDetection::partitionToGraph() {
     unordered_map<int, vector<int>> communities;
     for (const Node& node: c_ll.nodes) {
-        communities[node.label].push_back(node.id);
+        communities[node.dcdLabel].push_back(node.id);
     }
 
     Graph partitioned_graph(communities.size());
 
-    // Update id and label
+    // Update id and dcdLabel
     int index = 0;
     for (const auto& community: communities) {
         partitioned_graph.nodes[index].id = community.first;
-        partitioned_graph.nodes[index].label = community.first;
+        partitioned_graph.nodes[index].dcdLabel = community.first;
         partitioned_graph.id_to_idx_mapping[community.first] = index;
         index++;
     }
@@ -171,12 +172,12 @@ tuple<pair<int, int>, vector<int>> DynamicCommunityDetection::affectedByAddition
     affected_nodes.insert(src);
     affected_nodes.insert(dest);
 
-    int src_community = c_ll.nodes[src].label;
-    int dest_community = c_ll.nodes[dest].label;
+    int src_community = c_ll.nodes[src].dcdLabel;
+    int dest_community = c_ll.nodes[dest].dcdLabel;
     pair<int, int> involved_communities = {src_community, dest_community};
 
     for (const Node& node: c_ll.nodes) {
-        if (node.label == src_community || node.label == dest_community) {
+        if (node.dcdLabel == src_community || node.dcdLabel == dest_community) {
             affected_nodes.insert(node.id);
         }
     }
@@ -200,7 +201,7 @@ void DynamicCommunityDetection::removeEdge(int src, int dest) {
 
 void DynamicCommunityDetection::disbandCommunities(const vector<int>& anodes) {
     for (int node : anodes) {
-        c_ll.nodes[node].label = node;
+        c_ll.nodes[node].dcdLabel = node;
     }
 }
 
@@ -237,7 +238,7 @@ void DynamicCommunityDetection::syncCommunities(const pair<int, int>& involved_c
     // Add edges from disbanded nodes to pre-existing communities
     for (int i = 0; i < c_ll.nodes.size(); ++i) {
         for (int node: anodes) {
-            c_ul.addEdge(c_ul.id_to_idx_mapping[node], c_ul.id_to_idx_mapping[c_ll.nodes[i].label], c_ll.adjacencyMatrix[node][i]);
+            c_ul.addEdge(c_ul.id_to_idx_mapping[node], c_ul.id_to_idx_mapping[c_ll.nodes[i].dcdLabel], c_ll.adjacencyMatrix[node][i]);
         }
     }
 }
@@ -245,7 +246,7 @@ void DynamicCommunityDetection::syncCommunities(const pair<int, int>& involved_c
 unordered_map<int, int> DynamicCommunityDetection::getPredictedLabels() {
     unordered_map<int, int> predicted_labels{};
     for (const auto& node: c_ll.nodes) {
-        predicted_labels[node.id] = node.label;
+        predicted_labels[node.id] = node.dcdLabel;
     }
     return predicted_labels;
 }
