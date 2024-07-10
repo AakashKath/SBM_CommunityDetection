@@ -222,4 +222,9 @@ void Graph::removeNode(int nodeId) {
     // Update mappings
     id_to_index_mapping.erase(nodeId);
     index_to_id_mapping.erase(nodeIndex);
+
+    for (int i = nodeIndex; i < nodes.size(); ++i) {
+        id_to_index_mapping[nodes[i].id] = i;
+        index_to_id_mapping[i] = nodes[i].id;
+    }
 }

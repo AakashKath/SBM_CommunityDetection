@@ -41,7 +41,6 @@ DynamicCommunityDetection::~DynamicCommunityDetection() {
 }
 
 void DynamicCommunityDetection::initialPartition(Graph& c_aux) {
-    // TODO: Make "assignedLabel" a private attribute which is not available to other graphs
     for (auto& node: c_ll.nodes) {
         node.label = node.id;
     }

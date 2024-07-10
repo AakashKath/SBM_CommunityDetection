@@ -85,8 +85,7 @@ int main(int argc, char* argv[]) {
     DynamicCommunityDetection dcd(sbm.sbm_graph, addedEdges, removedEdges);
     dcd.getPredictedLabels();
 
-    // BeliefPropagation bp(sbm.sbm_graph, communities, radius);
-    // bp.run();
+    // BeliefPropagation bp(sbm.sbm_graph, communities, radius, intra_community_edge_probability, inter_community_edge_probability);
     // vector<int> labels = bp.getCommunityLabels();
     // for (int i = 0; i < labels.size(); ++i) {
     //     cout << "Node: " << i << " Community: " << labels[i] << endl;

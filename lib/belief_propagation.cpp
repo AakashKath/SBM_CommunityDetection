@@ -5,26 +5,23 @@
 #include <cmath>
 
 
-BeliefPropagation::BeliefPropagation(Graph& graph, int communityCount, int impactRadius) : graph(graph), communityCount(communityCount), impactRadius(impactRadius) {}
+BeliefPropagation::BeliefPropagation(Graph graph, int communityCount, int impactRadius, double intra_community_edge_probability, double inter_community_edge_probability): bp_graph(graph), communityCount(communityCount), impactRadius(impactRadius), intra_community_edge_probability(intra_community_edge_probability), inter_community_edge_probability(inter_community_edge_probability) {
+    for (int t = 0; t < bp_graph.nodes.size(); ++t) {
+        processVertex(t);
+    }
+}
 
 BeliefPropagation::~BeliefPropagation() {
     // Nothing to clean
 }
 
-void BeliefPropagation::run() {
-    for (int t = 0; t < graph.nodes.size(); ++t) {
-        processVertex(t);
-    }
-}
-
 void BeliefPropagation::processVertex(int nodeId) {
-    const Node& node = graph.getNode(nodeId);
+    const Node& node = bp_graph.getNode(nodeId);
 
     // Update incoming messsages for the new vertex
-    for (int w = 0; w < graph.nodes.size(); ++w) {
-        if (graph.adjacencyMatrix[w][nodeId] > 0) {
-            messages[w][nodeId] = StreamBP(messages[w], graph.getNode(w).bpLabel);
-        }
+    for (const auto& edge: node.edgeList) {
+        int w = get<1>(edge);
+        messages[w][nodeId] = StreamBP(messages[w], bp_graph.getNode(w).label);
     }
 
     // Update outgoing messages up to R hops
@@ -33,9 +30,10 @@ void BeliefPropagation::processVertex(int nodeId) {
         for (int v: rNeighborhood) {
             int v_prime = -1;
             double minDist = numeric_limits<double>::max();
-            for (int w = 0; w < graph.nodes.size(); ++w) {
-                if (graph.adjacencyMatrix[w][v] > 0 && messages[w].find(v) != messages[w].end()) {
-                    double dist = graph.adjacencyMatrix[w][v];
+            for (const auto& edge: bp_graph.getNode(v).edgeList) {
+                int w = get<1>(edge);
+                if (messages[w].find(v) != messages[w].end()) {
+                    double dist = get<2>(edge);
                     if (dist < minDist) {
                         minDist = dist;
                         v_prime = w;
@@ -43,7 +41,7 @@ void BeliefPropagation::processVertex(int nodeId) {
                 }
             }
             if (v_prime != -1) {
-                messages[v_prime][v] = StreamBP(messages[v_prime], graph.getNode(v_prime).bpLabel);
+                messages[v_prime][v] = StreamBP(messages[v_prime], bp_graph.getNode(v_prime).label);
             }
         }
     }
@@ -55,7 +53,7 @@ vector<double> BeliefPropagation::StreamBP(const unordered_map<int, vector<doubl
     for(const auto& message: incomingMessages) {
         const vector<double>& m = message.second;
         for (int s = 0; s < communityCount; ++s) {
-            result[s] *= (interCommProb + (intraCommProb - interCommProb) * m[s]);
+            result[s] *= (inter_community_edge_probability + (intra_community_edge_probability - inter_community_edge_probability) * m[s]);
         }
     }
 
@@ -68,7 +66,7 @@ vector<double> BeliefPropagation::StreamBP(const unordered_map<int, vector<doubl
 }
 
 vector<int> BeliefPropagation::getCommunityLabels() {
-    vector<int> labels(graph.nodes.size());
+    vector<int> labels(bp_graph.nodes.size());
 
     for (const auto& belief: beliefs) {
         int u = belief.first;
@@ -92,8 +90,9 @@ unordered_set<int> BeliefPropagation::collectRNeighborhood(int nodeId, int radiu
         int currentDistance = distances[current];
 
         if (currentDistance < radius) {
-            for (int w = 0; w < graph.nodes.size(); ++w) {
-                if (graph.adjacencyMatrix[current][w] > 0 && distances.find(w) == distances.end()) {
+            for (const auto& edge: bp_graph.getNode(current).edgeList) {
+                int w = get<1>(edge);
+                if (distances.find(w) == distances.end()) {
                     q.push(w);
                     distances[w] = currentDistance + 1;
                     neighborhood.insert(w);

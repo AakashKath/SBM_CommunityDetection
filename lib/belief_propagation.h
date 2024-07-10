@@ -12,17 +12,17 @@ using namespace std;
 // BeliefPropagation class
 class BeliefPropagation {
     public:
-        BeliefPropagation(Graph& graph, int communityCount, int impactRadius);
+        BeliefPropagation(Graph graph, int communityCount, int impactRadius, double intra_community_edge_probability, double inter_community_edge_probability);
         ~BeliefPropagation();
 
-        void run();
         vector<int> getCommunityLabels();
 
     private:
-        Graph& graph;
+        Graph bp_graph = Graph(0);
         int impactRadius;
         int communityCount;
-        double intraCommProb = 0.9, interCommProb = 0.1; // Should be synced with sbm
+        double intra_community_edge_probability;
+        double inter_community_edge_probability;
         unordered_map<int, unordered_map<int, vector<double>>> messages;
         unordered_map<int, vector<double>> beliefs;
 
