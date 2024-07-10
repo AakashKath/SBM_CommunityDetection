@@ -21,6 +21,8 @@ int main(int argc, char* argv[]) {
     int nodes = DEFAULT_NODES;
     int communities = DEFAULT_COMMUNITIES;
     int radius = DEFAULT_RADIUS;
+    double intra_community_edge_probability = DEFAULT_INTRA_COMMUNITY_EDGE_PROBABILITY;
+    double inter_community_edge_probability = DEFAULT_INTER_COMMUNITY_EDGE_PROBABILITY;
 
     // Parse command-line arguments
     for (int i = 1; i < argc; ++i) {
@@ -40,6 +42,22 @@ int main(int argc, char* argv[]) {
                 cerr << "Error: --communities or -c requires a number as an argument.\n";
                 return 1;
             }
+        } else if (strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "--intra_community_edge_probability") == 0) {
+            if (i+1 < argc) {
+                intra_community_edge_probability = stoi(argv[i + 1]);
+                ++i; // skip the next argument as it's the value for probability of intra-community edge
+            } else {
+                cerr << "Error: --intra_community_edge_probability or -w requires a number as an argument.\n";
+                return 1;
+            }
+        } else if (strcmp(argv[i], "-b") == 0 || strcmp(argv[i], "--inter_community_edge_probability") == 0) {
+            if (i+1 < argc) {
+                inter_community_edge_probability = stoi(argv[i + 1]);
+                ++i; // skip the next argument as it's the value for probability of inter-community edge
+            } else {
+                cerr << "Error: --inter_community_edge_probability or -b requires a number as an argument.\n";
+                return 1;
+            }
         } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             displayHelp();
             return 0;
@@ -50,24 +68,33 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // Make sure nodes can be equally divided into given communities
+    if (nodes % communities != 0) {
+        throw runtime_error("Nodes cannot be equally divided in given number of communities");
+    }
+
     // TODO: Need to use community probability vector and edge connection matrix
     // Can also just ask for inter and intra community probabilities
-    Sbm sbm(nodes, communities);
-    // sbm.sbm_graph.draw("output.png");
+    Sbm sbm(nodes, communities, intra_community_edge_probability, inter_community_edge_probability);
+    sbm.sbm_graph.draw("output.png");
 
     // TODO: Should be dynamic
-    // vector<pair<int, int>> addedEdges = {{0, 1}, {1, 2}, {5, 7}, {9, 10}};
-    // vector<pair<int, int>> removedEdges = {{0, 1}};
+    vector<pair<int, int>> addedEdges = {{0, 1}, {1, 2}, {5, 7}, {9, 10}};
+    vector<pair<int, int>> removedEdges = {{0, 1}};
 
-    // DynamicCommunityDetection dcd(sbm.sbm_graph, addedEdges, removedEdges);
-    // dcd.run();
-    // dcd.getPredictedLabels();
+    DynamicCommunityDetection dcd(sbm.sbm_graph, addedEdges, removedEdges);
+    dcd.getPredictedLabels();
 
-    BeliefPropagation bp(sbm.sbm_graph, communities, radius);
-    bp.run();
-    vector<int> labels = bp.getCommunityLabels();
-    for (int i = 0; i < labels.size(); ++i) {
-        cout << "Node: " << i << " Community: " << labels[i] << endl;
+    // BeliefPropagation bp(sbm.sbm_graph, communities, radius);
+    // bp.run();
+    // vector<int> labels = bp.getCommunityLabels();
+    // for (int i = 0; i < labels.size(); ++i) {
+    //     cout << "Node: " << i << " Community: " << labels[i] << endl;
+    // }
+
+    vector<Node> nodelist = sbm.sbm_graph.nodes;
+    for (int i = 0; i < nodelist.size(); ++i) {
+        cout << "Node: " << nodelist[i].id << " Label: " << nodelist[i].label << endl;
     }
 
     return 0;

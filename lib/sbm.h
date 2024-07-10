@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <random>
 
 #include "graph.h"
 
@@ -12,20 +13,24 @@ class Sbm {
     private:
         int numberNodes;
         int numberCommunities;
-        vector<double> p;
-        vector<vector<double>> W;
+        double intraCommunityEdgeProbability;
+        double interCommunityEdgeProbability;
+        vector<vector<int>> communityTracker;
+        mt19937 gen;
 
-        void generateProbabilityDistribution();
-        void generateProbabilityMatrix();
         Graph generateSbm();
+        bool isIntraCommunityEdge(double bias);
+        pair<int, int> generateIntraCommunityEdge();
+        pair<int, int> generateInterCommunityEdge();
 
     public:
-        Sbm(int numberNodes, int numberCommunities);
+        Sbm(int numberNodes, int numberCommunities, double intraCommunityEdgeProbability, double interCommunityEdgeProbability);
         ~Sbm();
 
         Graph sbm_graph;
 
         vector<int> listLabels();
+        pair<int, int> generateEdge();
 };
 
 #endif // SBM_H

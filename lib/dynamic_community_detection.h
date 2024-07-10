@@ -17,17 +17,15 @@ typedef vector<unordered_set<int>> Communities;
 
 class DynamicCommunityDetection {
     private:
-        Graph& graph;
+        const Graph& graph;
         Graph c_ll = Graph(0);
         Graph c_ul = Graph(0);
-        Graph c_aux = Graph(0);
         vector<pair<int, int>> addedEdges, removedEdges;
         double mod, old_mod;
 
-        void init();
-        void initialPartition();
+        void initialPartition(Graph& auxiliary_graph);
         double modularity(Graph& auxiliary_graph);
-        vector<pair<int, int>> oneLevel();
+        vector<pair<int, int>> oneLevel(Graph& auxiliary_graph);
         void updateCommunities(const vector<pair<int, int>>& changed_nodes);
         void partitionToGraph();
         tuple<pair<int, int>, vector<int>> affectedByAddition(int src, int dest);
@@ -38,10 +36,9 @@ class DynamicCommunityDetection {
         void syncCommunities(const pair<int, int>& involved_communities, const vector<int>& anodes);
 
     public:
-        DynamicCommunityDetection(Graph& graph, vector<pair<int, int>> addedEdges, vector<pair<int, int>> removedEdges);
+        DynamicCommunityDetection(const Graph& graph, vector<pair<int, int>> addedEdges, vector<pair<int, int>> removedEdges);
         ~DynamicCommunityDetection();
 
-        void run();
         unordered_map<int, int> getPredictedLabels();
 };
 

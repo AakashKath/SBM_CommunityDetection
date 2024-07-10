@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <unordered_map>
 
 using namespace std;
@@ -13,8 +14,9 @@ class Node {
     public:
         int id;
         int label;
-        int bpLabel;
-        int dcdLabel;
+        int offset;
+        // TODO: need to store only address, all edge info will be stored in a very long list
+        vector<tuple<int, int, int>> edgeList; // {src, dest, weight}
 
         Node(int id);
         ~Node();
@@ -26,20 +28,19 @@ class Graph {
         ~Graph();
 
         vector<Node> nodes;
-        vector<vector<int>> adjacencyMatrix; // Represents edge weights, with 0 being no edge
-        unordered_map<int, int> id_to_idx_mapping;
+        unordered_map<int, int> id_to_index_mapping;
+        unordered_map<int, int> index_to_id_mapping;
 
         void draw(const string &filename);
         string getEdgeColor(int srcLabel, int destLabel);
         string getNodeColor(int nodeLabel);
         int getTotalEdges();
-        void addEdge(int srcNode, int destNode, int edgeWeight = 1);
-        void removeEdge(int srcNode, int destNode);
+        void addEdge(int srcNodeId, int destNodeId, int edgeWeight = 1);
+        void removeEdge(int srcNodeId, int destNodeId);
+        int getEdgeWeight(int srcNodeId, int destNodeId);
         void addNode(int nodeId, int nodeLabel);
         void removeNode(int nodeId);
-        bool hasNode(int nodeId);
-        const Node& getNode(int nodeId) const;
-        int getIdFromIdx(int idx);
+        Node& getNode(int nodeId);
 };
 
 #endif // GRAPH_H

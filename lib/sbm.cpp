@@ -1,11 +1,20 @@
 #include "sbm.h"
-#include <random>
 #include <ctime>
 #include <algorithm>
+#include <unordered_set>
 
-Sbm::Sbm(int numberNodes, int numberCommunities): numberNodes(numberNodes), numberCommunities(numberCommunities), sbm_graph(numberNodes) {
-    generateProbabilityDistribution();
-    generateProbabilityMatrix();
+Sbm::Sbm(int numberNodes, int numberCommunities, double intraCommunityEdgeProbability, double interCommunityEdgeProbability):
+    numberNodes(numberNodes), numberCommunities(numberCommunities), intraCommunityEdgeProbability(intraCommunityEdgeProbability),
+    interCommunityEdgeProbability(interCommunityEdgeProbability), sbm_graph(numberNodes),
+    communityTracker(numberCommunities, vector<int>(numberNodes/numberCommunities, -1)) {
+
+    // Create a random number generator
+    // TODO: seed not working properly
+    random_device rd;
+    mt19937 gen(rd());
+    // mt19937 gen(static_cast<unsigned int>(time(nullptr)));
+
+    // Generate graph with no edges
     sbm_graph = generateSbm();
 }
 
@@ -13,68 +22,86 @@ Sbm::~Sbm() {
     // Nothing to clean
 }
 
-void Sbm::generateProbabilityDistribution() {
-    mt19937 rng(static_cast<unsigned int>(time(nullptr)));
-    uniform_real_distribution<double> dist(0.0, 0.1);
+pair<int, int> Sbm::generateEdge() {
+    double chooseNodesFromSameCommunity = numberCommunities * (1/((numberNodes/numberCommunities+1)*betal(numberNodes/numberCommunities-1, 3)));
+    double intraCommunityWeight = chooseNodesFromSameCommunity * intraCommunityEdgeProbability;
+    // TODO: Check correctness
+    double interCommunityWeight = (1/((numberNodes+1)*betal(numberNodes-1, 3)) - chooseNodesFromSameCommunity) * interCommunityEdgeProbability;
+    double bias = intraCommunityWeight / (interCommunityWeight + intraCommunityWeight);
 
-    p.resize(numberCommunities);
-    double sum = 0.0;
-    for (int i = 0; i < numberCommunities; ++i) {
-        p[i] = dist(rng);
-        sum += p[i];
+    if (isIntraCommunityEdge(bias)) {
+        return generateIntraCommunityEdge();
     }
-
-    // Normalize to ensure the sum of probabilities is 1
-    for (int i = 0; i < numberCommunities; ++i) {
-        p[i] = round((p[i] * 100.0) / sum) / 100;
-    }
+    return generateInterCommunityEdge();
 }
 
-void Sbm::generateProbabilityMatrix() {
-    mt19937 rng(static_cast<unsigned int>(time(nullptr)));
-    uniform_real_distribution<double> dist(0.0, 1.0);
+pair<int, int> Sbm::generateIntraCommunityEdge() {
+    // Create a uniform distribution between communities
+    uniform_int_distribution<int> communityDistribution(0, numberCommunities);
+    int community1 = communityDistribution(gen);
+    int community2;
 
-    W.resize(numberCommunities, vector<double>(numberCommunities));
-    for (int i = 0; i < numberCommunities; ++i) {
-        for (int j = 0; j < numberCommunities; ++j) {
-            W[i][j] = dist(rng);
-            W[j][i] = W[i][j]; // Ensure symmetry
-        }
-    }
+    do {
+        community2 = communityDistribution(gen);
+    } while(community1 == community2);
+
+    // Create a uniform distribution between node blocks
+    uniform_int_distribution<int> nodeDistribution(0, numberNodes/numberCommunities);
+    int offset1 = nodeDistribution(gen);
+    int offset2 = nodeDistribution(gen);
+
+    // Return node pair
+    return make_pair(communityTracker[community1][offset1], communityTracker[community2][offset2]);
+}
+
+pair<int, int> Sbm::generateInterCommunityEdge() {
+    // Create a uniform distribution between communities
+    uniform_int_distribution<int> communityDistribution(0, numberCommunities);
+    int community = communityDistribution(gen);
+
+    // Create a uniform distribution between node blocks
+    uniform_int_distribution<int> nodeDistribution(0, numberNodes/numberCommunities);
+    int offset1 = nodeDistribution(gen);
+    int offset2 = nodeDistribution(gen);
+
+    return make_pair(communityTracker[community][offset1], communityTracker[community][offset2]);
+}
+
+bool Sbm::isIntraCommunityEdge(double bias) {
+    // Create a uniform distribution in the range [0.0, 1.0)
+    uniform_real_distribution<double> dis(0.0, 1.0);
+
+    // Return true for intra community edge, and false for inter community edge
+    return dis(gen) < bias;
 }
 
 Graph Sbm::generateSbm() {
-    // Seed the random number generator
-    mt19937 rng(static_cast<unsigned int>(time(nullptr)));
-
-    // Create a distribution for the labels based on p
-    discrete_distribution<int> labelDistribution(p.begin(), p.end());
-
     // Create a graph instance
     Graph graph(numberNodes);
 
-    // Assign labels to vertices
-    for (int i = 0; i < numberNodes; ++i) {
-        graph.nodes[i].label = labelDistribution(rng);
-    }
+    uniform_int_distribution<int> dist(0, numberNodes - 1);
 
-    // TODO: Needs to be streaming
-    // Iterate over all pairs of vertices
-    for (int u = 0; u < numberNodes; ++u) {
-        for (int v = u + 1; v < numberNodes; ++v) {
-            // Get the label of u and v
-            int labelU = graph.nodes[u].label;
-            int labelV = graph.nodes[v].label;
+    unordered_set<int> usedNumbers;
 
-            // Generate a random number to decide if an edge exists
-            uniform_real_distribution<double> probDistribution(0.0, 1.0);
-            double randomValue = probDistribution(rng);
+    int blockSize = numberNodes/numberCommunities;
 
-            // Check if the random value is less than the probability given by W
-            if (randomValue < W[labelU][labelV]) {
-                graph.adjacencyMatrix[u][v] = 1;
-                graph.adjacencyMatrix[v][u] = 1; // Since the graph is undirected
-            }
+    for (int i = 0; i < numberCommunities; ++i) {
+        for (int j = 0; j < blockSize; ++j) {
+            int num;
+            do {
+                num = dist(gen);
+            } while(usedNumbers.find(num) != usedNumbers.end());
+
+            // Update usedNumbers
+            usedNumbers.insert(num);
+
+            // Assign labels to vertices
+            Node node = graph.getNode(num);
+            node.label = i;
+            node.offset = j;
+
+            // Fill tracker matrix
+            communityTracker[i][j] = num;
         }
     }
 
@@ -83,8 +110,8 @@ Graph Sbm::generateSbm() {
 
 vector<int> Sbm::listLabels() {
     vector<int> labels(sbm_graph.nodes.size());
-    for (size_t i = 0; i < sbm_graph.nodes.size(); ++i) {
-        labels[i] = sbm_graph.nodes[i].label;
+    for (const auto& node: sbm_graph.nodes) {
+        labels[node.id] = node.label;
     }
 
     return labels;

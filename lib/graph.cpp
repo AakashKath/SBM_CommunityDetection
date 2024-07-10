@@ -5,15 +5,17 @@
 #include <graphviz/gvc.h>
 #include <map>
 
-Node::Node(int id): id(id), label(-1) {}
+Node::Node(int id): id(id), label(-1), offset(-1) {}
 
 Node::~Node() {
     // Nothing to clean
 }
 
-Graph::Graph(int numberNodes): adjacencyMatrix(numberNodes, vector<int>(numberNodes, 0)) {
+Graph::Graph(int numberNodes) {
     for (int i = 0; i < numberNodes; ++i) {
         nodes.emplace_back(i);
+        id_to_index_mapping[i] = i;
+        index_to_id_mapping[i] = i;
     }
 }
 
@@ -56,18 +58,18 @@ void Graph::draw(const string &filename) {
     }
 
     // Create edges in Graphviz
-    for (int i = 0; i < adjacencyMatrix.size(); ++i) {
-        Agnode_t *agnode_src = agnode_map[i];
-        for (int j = i + 1; j < adjacencyMatrix[i].size(); ++j) {
-            if (adjacencyMatrix[i][j] > 0) {
-                Agnode_t *agnode_dest = agnode_map[j];
-                Agedge_t *edge = agedge(g, agnode_src, agnode_dest, NULL, 1);
+    for (const auto& node: nodes) {
+        Agnode_t *agnode_src = agnode_map[node.id];
+        for (const auto& edge: node.edgeList) {
+            int dest = get<1>(edge);
+            // int weight = get<2>(edge);
+            Agnode_t *agnode_dest = agnode_map[dest];
+            Agedge_t *ag_edge = agedge(g, agnode_src, agnode_dest, NULL, 1);
 
-                string edge_color = getEdgeColor(nodes[i].label, nodes[j].label);
+            string edge_color = getEdgeColor(node.label, nodes[dest].label);
 
-                // Set edge color
-                agsafeset(edge, const_cast<char*>("color"), const_cast<char*>(edge_color.c_str()), const_cast<char*>(""));
-            }
+            // Set edge color
+            agsafeset(ag_edge, const_cast<char*>("color"), const_cast<char*>(edge_color.c_str()), const_cast<char*>(""));
         }
     }
 
@@ -105,84 +107,119 @@ string Graph::getNodeColor(int nodeLabel) {
     }
 }
 
+// Total edges includes weight as well
 int Graph::getTotalEdges() {
     int edgeCount = 0;
-    for (const auto &row: adjacencyMatrix) {
-        for (int val: row) {
-            edgeCount += val;
+    for (const auto& node: nodes) {
+        for (const auto& edge: node.edgeList) {
+            edgeCount += get<2>(edge);
         }
     }
     return edgeCount/2;
 }
 
-const Node& Graph::getNode(int nodeId) const {
-    // TODO: Change this to use for loop over ids
-    return nodes[nodeId];
+Node& Graph::getNode(int nodeId) {
+    auto it = id_to_index_mapping.find(nodeId);
+    if (it == id_to_index_mapping.end()) {
+        throw runtime_error("Node not found in id to index mapping. Check update code.");
+    }
+    return nodes[it->second];
 }
 
-void Graph::addEdge(int srcNode, int destNode, int edgeWeight) {
-    // TODO: Need to probability randomness
-    adjacencyMatrix[srcNode][destNode] += edgeWeight;
-    adjacencyMatrix[destNode][srcNode] += edgeWeight; // Since the graph is undirected
+// TODO: `find_if` can be moved to a getEdge function
+void Graph::addEdge(int srcNodeId, int destNodeId, int edgeWeight) {
+    // Don't add edge entry if edge weight is 0
+    if (edgeWeight == 0) {
+        return;
+    }
+
+    Node& src = nodes[id_to_index_mapping[srcNodeId]];
+    auto it = find_if(src.edgeList.begin(), src.edgeList.end(),
+                [&](const tuple<int, int, int>& edge) {
+                    return get<1>(edge) == destNodeId;
+                });
+    if (it != src.edgeList.end()) {
+        get<2>(*it) += edgeWeight;
+    } else {
+        src.edgeList.push_back(make_tuple(srcNodeId, destNodeId, edgeWeight));
+    }
+
+    // Since the graph is undirected
+    Node& dest = nodes[id_to_index_mapping[destNodeId]];
+    it = find_if(dest.edgeList.begin(), dest.edgeList.end(),
+            [&](const tuple<int, int, int>& edge) {
+                return get<1>(edge) == srcNodeId;
+            });
+    if (it != dest.edgeList.end()) {
+        get<2>(*it) += edgeWeight;
+    } else {
+        dest.edgeList.push_back(make_tuple(destNodeId, srcNodeId, edgeWeight));
+    }
 }
 
-void Graph::removeEdge(int srcNode, int destNode) {
-    // TODO: same as addEdge
-    adjacencyMatrix[srcNode][destNode] = 0;
-    adjacencyMatrix[destNode][srcNode] = 0; // Since the graph is undirected
+int Graph::getEdgeWeight(int srcNodeId, int destNodeId) {
+    Node& src = nodes[id_to_index_mapping[srcNodeId]];
+    auto it = find_if(src.edgeList.begin(), src.edgeList.end(),
+                [&](const tuple<int, int, int>& edge) {
+                    return get<1>(edge) == destNodeId;
+                });
+    if (it == src.edgeList.end()) {
+        return 0;
+    }
+    return get<2>(*it);
 }
 
-// TODO: Make this function generic for usability in other functions
+void Graph::removeEdge(int srcNodeId, int destNodeId) {
+    Node& src = nodes[id_to_index_mapping[srcNodeId]];
+    auto it = find_if(src.edgeList.begin(), src.edgeList.end(),
+                [&](const tuple<int, int, int>& edge) {
+                    return get<0>(edge) == srcNodeId && get<1>(edge) == destNodeId;
+                });
+
+    if (it != src.edgeList.end()) {
+        src.edgeList.erase(it);
+    }
+
+    // Since the graph is directed
+    Node& dest = nodes[id_to_index_mapping[destNodeId]];
+    it = find_if(dest.edgeList.begin(), dest.edgeList.end(),
+        [&](const tuple<int, int, int>& edge) {
+            return get<0>(edge) == destNodeId && get<1>(edge) == srcNodeId;
+        });
+
+    if (it != dest.edgeList.end()) {
+        dest.edgeList.erase(it);
+    }
+}
+
 void Graph::addNode(int nodeId, int nodeLabel) {
+    // Create node and push it to the node queue
     Node node = Node(nodeId);
-    // For now addNode is being used only in dynamicCommunityDetection
-    node.dcdLabel = nodeLabel;
+    node.label = nodeLabel;
     nodes.push_back(node);
 
-    // Update the edge matrix to reflect edges of the new node
-    adjacencyMatrix.resize(nodes.size(), vector<int>(nodes.size(), 0));
-    for (int i = 0; i < nodes.size(); ++i) {
-        adjacencyMatrix[i].resize(nodes.size(), 0);
+    // Validate mappings are in sync
+    if (id_to_index_mapping.size() != index_to_id_mapping.size()) {
+        throw runtime_error("Id and index mappings are not in sync. Please fix the mappings first.");
     }
 
-    // Adjust id to index mapping
-    for (int i = 0; i < nodes.size(); ++i) {
-        id_to_idx_mapping[nodes[i].id] = i;
-    }
+    // Update mappings
+    int nodeIndex = id_to_index_mapping.size() + 1;
+    id_to_index_mapping[nodeId] = nodeIndex;
+    index_to_id_mapping[nodeIndex] = nodeId;
 }
 
 void Graph::removeNode(int nodeId) {
+    int nodeIndex = id_to_index_mapping[nodeId];
+    // Remove edge entry from all neighbors
+    for (const auto& edge: nodes[nodeIndex].edgeList) {
+        removeEdge(get<1>(edge), nodeId);
+    }
+
     // Remove node from list
-    nodes.erase(nodes.begin() + nodeId);
+    nodes.erase(nodes.begin() + nodeIndex);
 
-    // Remove edge row
-    adjacencyMatrix.erase(adjacencyMatrix.begin() + nodeId);
-
-    // Remove edge column
-    for (auto& row: adjacencyMatrix) {
-        row.erase(row.begin() + nodeId);
-    }
-
-    // Adjust id to index mapping
-    for (int i = 0; i < nodes.size(); ++i) {
-        id_to_idx_mapping[nodes[i].id] = i;
-    }
-}
-
-bool Graph::hasNode(int nodeId) {
-    for (const Node& existing_node: nodes) {
-        if (existing_node.id == nodeId) {
-            return true;
-        }
-    }
-    return false;
-}
-
-int Graph::getIdFromIdx(int idx) {
-    for (auto& pair: id_to_idx_mapping) {
-        if (pair.second == idx) {
-            return pair.first;
-        }
-    }
-    return -1;
+    // Update mappings
+    id_to_index_mapping.erase(nodeId);
+    index_to_id_mapping.erase(nodeIndex);
 }
