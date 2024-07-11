@@ -7,7 +7,7 @@ DynamicCommunityDetection::DynamicCommunityDetection(const Graph& graph, vector<
     initialPartition(c_aux);
     mod = modularity(c_aux);
     old_mod = 0;
-    int m = 1, n = 1;
+    int m = 0, n = 0;
     vector<pair<int, int>> changed_nodes;
     do {
         changed_nodes = oneLevel(c_aux);
@@ -33,7 +33,7 @@ DynamicCommunityDetection::DynamicCommunityDetection(const Graph& graph, vector<
         }
 
         c_aux = c_ul;
-    } while (mod >= old_mod || m <= addedEdges.size() || n <= removedEdges.size());
+    } while (mod > old_mod || m < addedEdges.size() || n < removedEdges.size());
 }
 
 DynamicCommunityDetection::~DynamicCommunityDetection() {
@@ -41,7 +41,7 @@ DynamicCommunityDetection::~DynamicCommunityDetection() {
 }
 
 void DynamicCommunityDetection::initialPartition(Graph& c_aux) {
-    for (auto& node: c_ll.nodes) {
+    for (Node& node: c_ll.nodes) {
         node.label = node.id;
     }
     for (Node& node: c_aux.nodes) {
@@ -51,6 +51,12 @@ void DynamicCommunityDetection::initialPartition(Graph& c_aux) {
 
 double DynamicCommunityDetection::modularity(Graph& auxiliary_graph) {
     int m = auxiliary_graph.getTotalEdges();
+
+    // Modularity is 0 in case of no edges
+    if (m == 0) {
+        return 0.0;
+    }
+
     double q = 0.0;
     vector<Node> nodes = auxiliary_graph.nodes;
     vector<int> degrees(nodes.size(), 0);
@@ -142,7 +148,6 @@ void DynamicCommunityDetection::partitionToGraph() {
         partitioned_graph.nodes[index].id = community.first;
         partitioned_graph.nodes[index].label = community.first;
         partitioned_graph.id_to_index_mapping[community.first] = index;
-        partitioned_graph.index_to_id_mapping[index] = community.first;
         index++;
     }
 

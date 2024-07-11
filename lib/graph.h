@@ -29,7 +29,6 @@ class Graph {
 
         vector<Node> nodes;
         unordered_map<int, int> id_to_index_mapping;
-        unordered_map<int, int> index_to_id_mapping;
 
         void draw(const string &filename);
         string getEdgeColor(int srcLabel, int destLabel);

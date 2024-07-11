@@ -15,7 +15,6 @@ Graph::Graph(int numberNodes) {
     for (int i = 0; i < numberNodes; ++i) {
         nodes.emplace_back(i);
         id_to_index_mapping[i] = i;
-        index_to_id_mapping[i] = i;
     }
 }
 
@@ -110,7 +109,7 @@ string Graph::getNodeColor(int nodeLabel) {
 // Total edges includes weight as well
 int Graph::getTotalEdges() {
     int edgeCount = 0;
-    for (const auto& node: nodes) {
+    for (const Node& node: nodes) {
         for (const auto& edge: node.edgeList) {
             edgeCount += get<2>(edge);
         }
@@ -198,15 +197,9 @@ void Graph::addNode(int nodeId, int nodeLabel) {
     node.label = nodeLabel;
     nodes.push_back(node);
 
-    // Validate mappings are in sync
-    if (id_to_index_mapping.size() != index_to_id_mapping.size()) {
-        throw runtime_error("Id and index mappings are not in sync. Please fix the mappings first.");
-    }
-
     // Update mappings
     int nodeIndex = id_to_index_mapping.size() + 1;
     id_to_index_mapping[nodeId] = nodeIndex;
-    index_to_id_mapping[nodeIndex] = nodeId;
 }
 
 void Graph::removeNode(int nodeId) {
@@ -221,10 +214,7 @@ void Graph::removeNode(int nodeId) {
 
     // Update mappings
     id_to_index_mapping.erase(nodeId);
-    index_to_id_mapping.erase(nodeIndex);
-
     for (int i = nodeIndex; i < nodes.size(); ++i) {
         id_to_index_mapping[nodes[i].id] = i;
-        index_to_id_mapping[i] = nodes[i].id;
     }
 }
