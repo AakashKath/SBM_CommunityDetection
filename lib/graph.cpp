@@ -120,7 +120,7 @@ int Graph::getTotalEdges() {
 Node& Graph::getNode(int nodeId) {
     auto it = id_to_index_mapping.find(nodeId);
     if (it == id_to_index_mapping.end()) {
-        throw runtime_error("Node not found in id to index mapping. Check update code.");
+        throw runtime_error("Node with id " + to_string(nodeId) + " not found in id to index mapping.");
     }
     return nodes[it->second];
 }
@@ -198,7 +198,7 @@ void Graph::addNode(int nodeId, int nodeLabel) {
     nodes.push_back(node);
 
     // Update mappings
-    int nodeIndex = id_to_index_mapping.size() + 1;
+    int nodeIndex = id_to_index_mapping.size();
     id_to_index_mapping[nodeId] = nodeIndex;
 }
 

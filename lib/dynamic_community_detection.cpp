@@ -1,7 +1,16 @@
 #include "dynamic_community_detection.h"
 
 
-DynamicCommunityDetection::DynamicCommunityDetection(const Graph& graph, vector<pair<int, int>> addedEdges, vector<pair<int, int>> removedEdges): graph(graph), addedEdges(addedEdges), removedEdges(removedEdges) {
+struct PairHash {
+    template<typename T, typename U>
+    size_t operator()(const pair<T, U> &p) const {
+        auto hash1 = hash<T>{}(p.first);
+        auto hash2 = hash<U>{}(p.second);
+        return hash1 ^ (hash2 << 1); // Combine hashes of first and second
+    }
+};
+
+DynamicCommunityDetection::DynamicCommunityDetection(const Graph& graph, vector<pair<int, int>> addedEdges, vector<pair<int, int>> removedEdges): graph(graph) {
     c_ll = graph;
     Graph c_aux = c_ll;
     initialPartition(c_aux);
@@ -144,12 +153,14 @@ void DynamicCommunityDetection::partitionToGraph() {
 
     // Update id, label, and mapping
     int index = 0;
+    unordered_map<int, int> new_id_to_index_mapping;
     for (const auto& community: communities) {
         partitioned_graph.nodes[index].id = community.first;
         partitioned_graph.nodes[index].label = community.first;
-        partitioned_graph.id_to_index_mapping[community.first] = index;
+        new_id_to_index_mapping[community.first] = index;
         index++;
     }
+    partitioned_graph.id_to_index_mapping = new_id_to_index_mapping;
 
     // Add edges
     for (const auto& node: c_ll.nodes) {
@@ -198,12 +209,6 @@ void DynamicCommunityDetection::disbandCommunities(const vector<int>& anodes) {
 }
 
 void DynamicCommunityDetection::syncCommunities(const pair<int, int>& involved_communities, const vector<int>& anodes) {
-    // Fetch neighboring communities
-    vector<int> neighboring_communities{};
-    for (const auto& edge: c_ul.getNode(involved_communities.first).edgeList) {
-        neighboring_communities.push_back(get<1>(edge));
-    }
-
     // Remove pre-existing nodes
     c_ul.removeNode(involved_communities.first);
     c_ul.removeNode(involved_communities.second);
@@ -214,10 +219,18 @@ void DynamicCommunityDetection::syncCommunities(const pair<int, int>& involved_c
     }
 
     // Create edges (includes both disbanded nodes as well as pre-existing communities)
+    unordered_set<pair<int, int>, PairHash> added_edges; // To track added edges
     for (int src: anodes) {
         for (const auto& edge: c_ll.getNode(src).edgeList) {
-            int dest = c_ll.getNode(get<1>(edge)).label;
-            c_ul.addEdge(src, dest, get<2>(edge));
+            const Node& c_ll_node = c_ll.getNode(get<1>(edge));
+
+            // Check if the edge already exists in added_edges
+            if (added_edges.find({src, c_ll_node.id}) == added_edges.end()) {
+                int dest = c_ll_node.label;
+                c_ul.addEdge(src, dest, get<2>(edge));
+                added_edges.insert({src, c_ll_node.id});
+                added_edges.insert({c_ll_node.id, src});
+            }
         }
     }
 }

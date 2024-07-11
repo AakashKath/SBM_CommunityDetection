@@ -20,7 +20,6 @@ class DynamicCommunityDetection {
         const Graph& graph;
         Graph c_ll = Graph(0);
         Graph c_ul = Graph(0);
-        vector<pair<int, int>> addedEdges, removedEdges;
         double mod, old_mod;
 
         void initialPartition(Graph& auxiliary_graph);
