@@ -83,18 +83,16 @@ int main(int argc, char* argv[]) {
     vector<pair<int, int>> removedEdges = {{0, 1}};
 
     DynamicCommunityDetection dcd(sbm.sbm_graph, addedEdges, removedEdges);
-    dcd.getPredictedLabels();
+    unordered_map<int, int> predicted_labels = dcd.getPredictedLabels();
+    for (int i = 0; i < predicted_labels.size(); ++i) {
+        cout << "Node: " << i << " Community: " << predicted_labels[i] << endl;
+    }
 
     // BeliefPropagation bp(sbm.sbm_graph, communities, radius, intra_community_edge_probability, inter_community_edge_probability);
     // vector<int> labels = bp.getCommunityLabels();
     // for (int i = 0; i < labels.size(); ++i) {
     //     cout << "Node: " << i << " Community: " << labels[i] << endl;
     // }
-
-    vector<Node> nodelist = sbm.sbm_graph.nodes;
-    for (int i = 0; i < nodelist.size(); ++i) {
-        cout << "Node: " << nodelist[i].id << " Label: " << nodelist[i].label << endl;
-    }
 
     return 0;
 }
