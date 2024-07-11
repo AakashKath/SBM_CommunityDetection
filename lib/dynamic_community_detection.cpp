@@ -16,15 +16,15 @@ DynamicCommunityDetection::DynamicCommunityDetection(const Graph& graph, vector<
         mod = modularity(c_ll);
         partitionToGraph();
 
-        if (m <= addedEdges.size()) {
-            auto [src, dest] = addedEdges[m - 1];
+        if (m < addedEdges.size()) {
+            auto [src, dest] = addedEdges[m];
             auto [involved_communities, anodes] = affectedByAddition(src, dest);
             addEdge(src, dest);
             disbandCommunities(anodes);
             syncCommunities(involved_communities, anodes);
             m++;
-        } else if (n <= removedEdges.size()) {
-            auto [src, dest] = removedEdges[n - 1];
+        } else if (n < removedEdges.size()) {
+            auto [src, dest] = removedEdges[n];
             auto [involved_communities, anodes] = affectedByRemoval(src, dest);
             removeEdge(src, dest);
             disbandCommunities(anodes);
