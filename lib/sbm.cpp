@@ -35,7 +35,7 @@ pair<int, int> Sbm::generateEdge() {
     return generateInterCommunityEdge();
 }
 
-pair<int, int> Sbm::generateIntraCommunityEdge() {
+pair<int, int> Sbm::generateInterCommunityEdge() {
     // Create a uniform distribution between communities
     uniform_int_distribution<int> communityDistribution(0, numberCommunities);
     int community1 = communityDistribution(gen);
@@ -54,7 +54,7 @@ pair<int, int> Sbm::generateIntraCommunityEdge() {
     return make_pair(communityTracker[community1][offset1], communityTracker[community2][offset2]);
 }
 
-pair<int, int> Sbm::generateInterCommunityEdge() {
+pair<int, int> Sbm::generateIntraCommunityEdge() {
     // Create a uniform distribution between communities
     uniform_int_distribution<int> communityDistribution(0, numberCommunities);
     int community = communityDistribution(gen);
