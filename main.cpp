@@ -78,8 +78,10 @@ int main(int argc, char* argv[]) {
     Sbm sbm(nodes, communities, intra_community_edge_probability, inter_community_edge_probability);
     sbm.sbm_graph.draw("output.png");
 
-    // TODO: Should be dynamic
-    vector<pair<int, int>> addedEdges = {{0, 1}, {0, 2}, {1, 2}, {2, 4}, {3, 4}, {3, 6}, {4, 5}, {5, 6}};
+    vector<pair<int, int>> addedEdges{};
+    for (int i = 0; i < 10; ++i) {
+        addedEdges.push_back(sbm.generateEdge());
+    }
     vector<pair<int, int>> removedEdges = {};
 
     DynamicCommunityDetection dcd(sbm.sbm_graph, addedEdges, removedEdges);

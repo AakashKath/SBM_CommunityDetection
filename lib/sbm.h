@@ -15,11 +15,12 @@ class Sbm {
         int numberCommunities;
         double intraCommunityEdgeProbability;
         double interCommunityEdgeProbability;
+        double bias;
         vector<vector<int>> communityTracker;
         mt19937 gen;
 
         Graph generateSbm();
-        bool isIntraCommunityEdge(double bias);
+        bool isIntraCommunityEdge();
         pair<int, int> generateIntraCommunityEdge();
         pair<int, int> generateInterCommunityEdge();
 

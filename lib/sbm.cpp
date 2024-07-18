@@ -16,6 +16,13 @@ Sbm::Sbm(int numberNodes, int numberCommunities, double intraCommunityEdgeProbab
 
     // Generate graph with no edges
     sbm_graph = generateSbm();
+
+    // Calculate bias for edge generation
+    double chooseNodesFromSameCommunity = numberCommunities * (1.0 / ((numberNodes / numberCommunities + 1) * betal(numberNodes / numberCommunities - 1, 3)));
+    double intraCommunityWeight = chooseNodesFromSameCommunity * intraCommunityEdgeProbability;
+    // TODO: Check correctness
+    double interCommunityWeight = (1.0 / ((numberNodes + 1) * betal(numberNodes - 1, 3)) - chooseNodesFromSameCommunity) * interCommunityEdgeProbability;
+    double bias = intraCommunityWeight / (interCommunityWeight + intraCommunityWeight);
 }
 
 Sbm::~Sbm() {
@@ -23,13 +30,7 @@ Sbm::~Sbm() {
 }
 
 pair<int, int> Sbm::generateEdge() {
-    double chooseNodesFromSameCommunity = numberCommunities * (1.0 / ((numberNodes / numberCommunities + 1) * betal(numberNodes / numberCommunities - 1, 3)));
-    double intraCommunityWeight = chooseNodesFromSameCommunity * intraCommunityEdgeProbability;
-    // TODO: Check correctness
-    double interCommunityWeight = (1.0 / ((numberNodes + 1) * betal(numberNodes - 1, 3)) - chooseNodesFromSameCommunity) * interCommunityEdgeProbability;
-    double bias = intraCommunityWeight / (interCommunityWeight + intraCommunityWeight);
-
-    if (isIntraCommunityEdge(bias)) {
+    if (isIntraCommunityEdge()) {
         return generateIntraCommunityEdge();
     }
     return generateInterCommunityEdge();
@@ -37,7 +38,7 @@ pair<int, int> Sbm::generateEdge() {
 
 pair<int, int> Sbm::generateInterCommunityEdge() {
     // Create a uniform distribution between communities
-    uniform_int_distribution<int> communityDistribution(0, numberCommunities);
+    uniform_int_distribution<int> communityDistribution(0, numberCommunities - 1);
     int community1 = communityDistribution(gen);
     int community2;
 
@@ -67,7 +68,7 @@ pair<int, int> Sbm::generateIntraCommunityEdge() {
     return make_pair(communityTracker[community][offset1], communityTracker[community][offset2]);
 }
 
-bool Sbm::isIntraCommunityEdge(double bias) {
+bool Sbm::isIntraCommunityEdge() {
     // Create a uniform distribution in the range [0.0, 1.0)
     uniform_real_distribution<double> dis(0.0, 1.0);
 
