@@ -1,15 +1,6 @@
 #include "dynamic_community_detection.h"
 
 
-struct PairHash {
-    template<typename T, typename U>
-    size_t operator()(const pair<T, U> &p) const {
-        auto hash1 = hash<T>{}(p.first);
-        auto hash2 = hash<U>{}(p.second);
-        return hash1 ^ (hash2 << 1); // Combine hashes of first and second
-    }
-};
-
 DynamicCommunityDetection::DynamicCommunityDetection(Graph graph, vector<pair<int, int>> addedEdges, vector<pair<int, int>> removedEdges): c_ll(graph), c_ul(Graph(0)) {
     Graph c_aux = c_ll;
     initialPartition(c_aux);
