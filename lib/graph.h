@@ -28,17 +28,20 @@ class Graph {
         ~Graph();
 
         vector<Node> nodes;
-        unordered_map<int, int> id_to_index_mapping;
+        unordered_map<int, size_t> id_to_index_mapping;
 
         void draw(const string &filename);
         string getEdgeColor(int srcLabel, int destLabel);
         string getNodeColor(int nodeLabel);
-        int getTotalEdges();
+        int getTotalEdges() const;
         void addEdge(int srcNodeId, int destNodeId, int edgeWeight = 1);
+        void addUndirectedEdge(int srcNodeId, int destNodeId, int edgeWeight = 1);
         void removeEdge(int srcNodeId, int destNodeId);
+        void removeUndirectedEdge(int srcNodeId, int destNodeId);
         int getEdgeWeight(int srcNodeId, int destNodeId);
         void addNode(int nodeId, int nodeLabel);
         void removeNode(int nodeId);
+        const Node& getNode(int nodeId) const;
         Node& getNode(int nodeId);
 };
 

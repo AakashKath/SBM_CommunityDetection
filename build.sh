@@ -9,7 +9,7 @@ mkdir -p build
 cd build
 
 # Run cmake and make
-cmake ..
+cmake .. -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER=Address # Used for memory leakage detection
 make
 
 # Navigate back to the project root

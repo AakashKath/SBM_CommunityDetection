@@ -26,8 +26,7 @@ void BeliefPropagation::processVertex(int nodeId) {
 
     // Update outgoing messages up to R hops
     for (int radius = 1; radius <= impactRadius; ++radius) {
-        unordered_set<int> rNeighborhood = collectRNeighborhood(nodeId, radius);
-        for (int v: rNeighborhood) {
+        for (int v: collectRNeighborhood(nodeId, radius)) {
             int v_prime = -1;
             double minDist = numeric_limits<double>::max();
             for (const auto& edge: bp_graph.getNode(v).edgeList) {

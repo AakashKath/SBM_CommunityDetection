@@ -10,8 +10,7 @@ struct PairHash {
     }
 };
 
-DynamicCommunityDetection::DynamicCommunityDetection(const Graph& graph, vector<pair<int, int>> addedEdges, vector<pair<int, int>> removedEdges): graph(graph) {
-    c_ll = graph;
+DynamicCommunityDetection::DynamicCommunityDetection(Graph graph, vector<pair<int, int>> addedEdges, vector<pair<int, int>> removedEdges): c_ll(graph), c_ul(Graph(0)) {
     Graph c_aux = c_ll;
     initialPartition(c_aux);
     mod = modularity(c_aux);
@@ -28,14 +27,14 @@ DynamicCommunityDetection::DynamicCommunityDetection(const Graph& graph, vector<
         if (m < addedEdges.size()) {
             auto [src, dest] = addedEdges[m];
             auto [involved_communities, anodes] = affectedByAddition(src, dest);
-            addEdge(src, dest);
+            c_ll.addUndirectedEdge(src, dest);
             disbandCommunities(anodes);
             syncCommunities(involved_communities, anodes);
             m++;
         } else if (n < removedEdges.size()) {
             auto [src, dest] = removedEdges[n];
             auto [involved_communities, anodes] = affectedByRemoval(src, dest);
-            removeEdge(src, dest);
+            c_ll.removeUndirectedEdge(src, dest);
             disbandCommunities(anodes);
             syncCommunities(involved_communities, anodes);
             n++;
@@ -58,7 +57,7 @@ void DynamicCommunityDetection::initialPartition(Graph& c_aux) {
     }
 }
 
-double DynamicCommunityDetection::modularity(Graph& auxiliary_graph) {
+double DynamicCommunityDetection::modularity(const Graph& auxiliary_graph) const {
     int m = auxiliary_graph.getTotalEdges();
 
     // Modularity is 0 in case of no edges
@@ -67,11 +66,10 @@ double DynamicCommunityDetection::modularity(Graph& auxiliary_graph) {
     }
 
     double q = 0.0;
-    vector<Node> nodes = auxiliary_graph.nodes;
-    vector<int> degrees(nodes.size(), 0);
+    vector<int> degrees(auxiliary_graph.nodes.size(), 0);
 
     // Degree counts weight on edge as well
-    for (const auto& node: nodes) {
+    for (const Node& node: auxiliary_graph.nodes) {
         int degreeWeight = 0;
         for (const auto& edge: node.edgeList) {
             degreeWeight += get<2>(edge);
@@ -79,13 +77,13 @@ double DynamicCommunityDetection::modularity(Graph& auxiliary_graph) {
         degrees[node.id] = degreeWeight;
     }
 
-    for (const auto& srcNode: nodes) {
+    for (const Node& srcNode: auxiliary_graph.nodes) {
         for (const auto& edge: srcNode.edgeList) {
             int destNodeId = get<1>(edge);
             int weight = get<2>(edge);
             const Node& destNode = auxiliary_graph.getNode(destNodeId);
             if (srcNode.label == destNode.label) {
-                q += (weight - (degrees[srcNode.id] * degrees[destNodeId]) / (2.0 * m));
+                q += (weight - static_cast<double>(degrees[srcNode.id] * degrees[destNodeId]) / (2.0 * m));
             }
         }
     }
@@ -94,43 +92,79 @@ double DynamicCommunityDetection::modularity(Graph& auxiliary_graph) {
 }
 
 vector<pair<int, int>> DynamicCommunityDetection::oneLevel(Graph& auxiliary_graph) {
-    vector<pair<int, int>> changed_nodes{};
-    bool moved = false;
-    vector<int> nodes(c_ll.nodes.size());
-    iota(nodes.begin(), nodes.end(), 0);
+    unordered_map<int, vector<int>> communities;
+    for (const Node& node: auxiliary_graph.nodes) {
+        communities[node.label].push_back(node.id);
+    }
+
+    unordered_set<int> changed_aux_nodes{};
+    vector<int> node_indices(auxiliary_graph.nodes.size());
+    iota(node_indices.begin(), node_indices.end(), 0);
     random_device rd;
     mt19937 g(rd());
-    shuffle(nodes.begin(), nodes.end(), g);
+    shuffle(node_indices.begin(), node_indices.end(), g);
+    double initial_modularity = modularity(auxiliary_graph);
 
-    for (auto& node: auxiliary_graph.nodes) {
+    for (int idx: node_indices) {
+        Node& node = auxiliary_graph.nodes[idx];
+
         int current_community = node.label;
         int best_community = current_community;
         double max_modularity_gain = numeric_limits<double>::lowest();
-        double initial_modularity = modularity(auxiliary_graph);
+        double best_modularity;
 
         // List neighboring communities for possible movements
         unordered_set<int> neighboring_communities;
         for (const auto& edge: node.edgeList) {
             const Node& destNode = auxiliary_graph.getNode(get<1>(edge));
-            neighboring_communities.insert(destNode.label);
+            // Skip if same as current community
+            if (destNode.label != current_community) {
+                neighboring_communities.insert(destNode.label);
+            }
         }
 
         for (int community: neighboring_communities) {
-            // Add node to the new community
-            node.label = community;
+            // Temporarily move node to new community
+            for (int nodeId: communities[current_community]) {
+                Node& movedNode = auxiliary_graph.getNode(nodeId);
+                movedNode.label = community;
+            }
 
-            double modularity_gain = modularity(auxiliary_graph) - initial_modularity;
-            if (modularity_gain > max_modularity_gain) {
+            double updated_modularity = modularity(auxiliary_graph);
+
+            double modularity_gain = updated_modularity - initial_modularity;
+            if (modularity_gain >= 0 && modularity_gain > max_modularity_gain) {
                 best_community = community;
+                best_modularity = updated_modularity;
                 max_modularity_gain = modularity_gain;
+            }
+
+            // Move the node back to its original community
+            for (int nodeId: communities[current_community]) {
+                Node& movedNode = auxiliary_graph.getNode(nodeId);
+                movedNode.label = current_community;
             }
         }
 
         // Move node to the best community found
-        node.label = best_community;
         if (best_community != current_community) {
-            moved = true;
-            changed_nodes.emplace_back(node.id, best_community);
+            initial_modularity = best_modularity;
+            for (int nodeId: communities[current_community]) {
+                Node& movedNode = auxiliary_graph.getNode(nodeId);
+                movedNode.label = best_community;
+                changed_aux_nodes.insert(nodeId);
+            }
+            communities[best_community].insert(communities[best_community].end(), communities[current_community].begin(), communities[current_community].end());
+            communities.erase(current_community);
+        }
+    }
+
+    // Get changed nodes from auxiliary graph
+    vector<pair<int, int>> changed_nodes{};
+    for (const Node& node: c_ll.nodes) {
+        if (changed_aux_nodes.find(node.label) != changed_aux_nodes.end()) {
+            const Node& aux_node = auxiliary_graph.getNode(node.label);
+            changed_nodes.emplace_back(node.id, aux_node.label);
         }
     }
 
@@ -139,7 +173,8 @@ vector<pair<int, int>> DynamicCommunityDetection::oneLevel(Graph& auxiliary_grap
 
 void DynamicCommunityDetection::updateCommunities(const vector<pair<int, int>>& changed_nodes) {
     for (const auto& node_pair : changed_nodes) {
-        c_ll.getNode(node_pair.first).label = node_pair.second;
+        Node& node = c_ll.getNode(node_pair.first);
+        node.label = node_pair.second;
     }
 }
 
@@ -153,7 +188,7 @@ void DynamicCommunityDetection::partitionToGraph() {
 
     // Update id, label, and mapping
     int index = 0;
-    unordered_map<int, int> new_id_to_index_mapping;
+    unordered_map<int, size_t> new_id_to_index_mapping;
     for (const auto& community: communities) {
         partitioned_graph.nodes[index].id = community.first;
         partitioned_graph.nodes[index].label = community.first;
@@ -164,21 +199,25 @@ void DynamicCommunityDetection::partitionToGraph() {
 
     // Add edges
     for (const auto& node: c_ll.nodes) {
+        int srcCommunity = node.label;
         for (const auto& edge: node.edgeList) {
-            partitioned_graph.addEdge(node.label, c_ll.getNode(get<1>(edge)).label, get<2>(edge));
+            int destNodeId = get<1>(edge);
+            int weight = get<2>(edge);
+            int destCommunity = c_ll.getNode(destNodeId).label;
+            partitioned_graph.addEdge(srcCommunity, destCommunity, weight);
         }
     }
 
     c_ul = partitioned_graph;
 }
 
-tuple<pair<int, int>, vector<int>> DynamicCommunityDetection::affectedByAddition(int src, int dest) {
+pair<pair<int, int>, unordered_set<int>> DynamicCommunityDetection::affectedByAddition(int src, int dest) const {
     unordered_set<int> affected_nodes;
     affected_nodes.insert(src);
     affected_nodes.insert(dest);
 
-    int srcCommunity = c_ll.nodes[src].label;
-    int destCommunity = c_ll.nodes[dest].label;
+    int srcCommunity = c_ll.getNode(src).label;
+    int destCommunity = c_ll.getNode(dest).label;
     pair<int, int> involved_communities = {srcCommunity, destCommunity};
 
     for (const Node& node: c_ll.nodes) {
@@ -187,31 +226,26 @@ tuple<pair<int, int>, vector<int>> DynamicCommunityDetection::affectedByAddition
         }
     }
 
-    return {involved_communities, vector<int>(affected_nodes.begin(), affected_nodes.end())};
+    return {involved_communities, affected_nodes};
 }
 
-tuple<pair<int, int>, vector<int>> DynamicCommunityDetection::affectedByRemoval(int src, int dest) {
+pair<pair<int, int>, unordered_set<int>> DynamicCommunityDetection::affectedByRemoval(int src, int dest) const {
     return affectedByAddition(src, dest);
 }
 
-void DynamicCommunityDetection::addEdge(int src, int dest) {
-    c_ll.addEdge(src, dest);
-}
-
-void DynamicCommunityDetection::removeEdge(int src, int dest) {
-    c_ll.removeEdge(src, dest);
-}
-
-void DynamicCommunityDetection::disbandCommunities(const vector<int>& anodes) {
+void DynamicCommunityDetection::disbandCommunities(const unordered_set<int>& anodes) {
     for (int nodeId : anodes) {
-        c_ll.nodes[c_ll.id_to_index_mapping[nodeId]].label = nodeId;
+        Node& node = c_ll.getNode(nodeId);
+        node.label = nodeId;
     }
 }
 
-void DynamicCommunityDetection::syncCommunities(const pair<int, int>& involved_communities, const vector<int>& anodes) {
+void DynamicCommunityDetection::syncCommunities(const pair<int, int>& involved_communities, const unordered_set<int>& anodes) {
     // Remove pre-existing nodes
     c_ul.removeNode(involved_communities.first);
-    c_ul.removeNode(involved_communities.second);
+    if (involved_communities.first != involved_communities.second) {
+        c_ul.removeNode(involved_communities.second);
+    }
 
     // Add new nodes
     for (int node: anodes) {
@@ -219,17 +253,17 @@ void DynamicCommunityDetection::syncCommunities(const pair<int, int>& involved_c
     }
 
     // Create edges (includes both disbanded nodes as well as pre-existing communities)
-    unordered_set<pair<int, int>, PairHash> added_edges; // To track added edges
     for (int src: anodes) {
-        for (const auto& edge: c_ll.getNode(src).edgeList) {
-            const Node& c_ll_node = c_ll.getNode(get<1>(edge));
+        const Node& srcNode = c_ll.getNode(src);
+        for (const auto& edge: srcNode.edgeList) {
+            int destNodeId = get<1>(edge);
+            int weight = get<2>(edge);
+            const Node& destNode = c_ll.getNode(destNodeId);
 
-            // Check if the edge already exists in added_edges
-            if (added_edges.find({src, c_ll_node.id}) == added_edges.end()) {
-                int dest = c_ll_node.label;
-                c_ul.addEdge(src, dest, get<2>(edge));
-                added_edges.insert({src, c_ll_node.id});
-                added_edges.insert({c_ll_node.id, src});
+            if (anodes.find(destNodeId) != anodes.end()) {
+                c_ul.addEdge(src, destNode.label, weight);
+            } else {
+                c_ul.addUndirectedEdge(src, destNode.label, weight);
             }
         }
     }

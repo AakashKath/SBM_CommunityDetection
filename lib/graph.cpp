@@ -5,7 +5,7 @@
 #include <graphviz/gvc.h>
 #include <map>
 
-Node::Node(int id): id(id), label(-1), offset(-1) {}
+Node::Node(int id): id(id), label(-1), offset(-1), edgeList{} {}
 
 Node::~Node() {
     // Nothing to clean
@@ -107,14 +107,22 @@ string Graph::getNodeColor(int nodeLabel) {
 }
 
 // Total edges includes weight as well
-int Graph::getTotalEdges() {
+int Graph::getTotalEdges() const {
     int edgeCount = 0;
     for (const Node& node: nodes) {
         for (const auto& edge: node.edgeList) {
             edgeCount += get<2>(edge);
         }
     }
-    return edgeCount/2;
+    return edgeCount / 2;
+}
+
+const Node& Graph::getNode(int nodeId) const {
+    auto it = id_to_index_mapping.find(nodeId);
+    if (it == id_to_index_mapping.end()) {
+        throw runtime_error("Node with id " + to_string(nodeId) + " not found in id to index mapping.");
+    }
+    return nodes[it->second];
 }
 
 Node& Graph::getNode(int nodeId) {
@@ -132,7 +140,7 @@ void Graph::addEdge(int srcNodeId, int destNodeId, int edgeWeight) {
         return;
     }
 
-    Node& src = nodes[id_to_index_mapping[srcNodeId]];
+    Node& src = getNode(srcNodeId);
     auto it = find_if(src.edgeList.begin(), src.edgeList.end(),
                 [&](const tuple<int, int, int>& edge) {
                     return get<1>(edge) == destNodeId;
@@ -140,24 +148,17 @@ void Graph::addEdge(int srcNodeId, int destNodeId, int edgeWeight) {
     if (it != src.edgeList.end()) {
         get<2>(*it) += edgeWeight;
     } else {
-        src.edgeList.push_back(make_tuple(srcNodeId, destNodeId, edgeWeight));
-    }
-
-    // Since the graph is undirected
-    Node& dest = nodes[id_to_index_mapping[destNodeId]];
-    it = find_if(dest.edgeList.begin(), dest.edgeList.end(),
-            [&](const tuple<int, int, int>& edge) {
-                return get<1>(edge) == srcNodeId;
-            });
-    if (it != dest.edgeList.end()) {
-        get<2>(*it) += edgeWeight;
-    } else {
-        dest.edgeList.push_back(make_tuple(destNodeId, srcNodeId, edgeWeight));
+        src.edgeList.emplace_back(srcNodeId, destNodeId, edgeWeight);
     }
 }
 
+void Graph::addUndirectedEdge(int srcNodeId, int destNodeId, int edgeWeight) {
+    addEdge(srcNodeId, destNodeId, edgeWeight);
+    addEdge(destNodeId, srcNodeId, edgeWeight); // Since the graph is undirected
+}
+
 int Graph::getEdgeWeight(int srcNodeId, int destNodeId) {
-    Node& src = nodes[id_to_index_mapping[srcNodeId]];
+    Node& src = getNode(srcNodeId);
     auto it = find_if(src.edgeList.begin(), src.edgeList.end(),
                 [&](const tuple<int, int, int>& edge) {
                     return get<1>(edge) == destNodeId;
@@ -169,7 +170,7 @@ int Graph::getEdgeWeight(int srcNodeId, int destNodeId) {
 }
 
 void Graph::removeEdge(int srcNodeId, int destNodeId) {
-    Node& src = nodes[id_to_index_mapping[srcNodeId]];
+    Node& src = getNode(srcNodeId);
     auto it = find_if(src.edgeList.begin(), src.edgeList.end(),
                 [&](const tuple<int, int, int>& edge) {
                     return get<0>(edge) == srcNodeId && get<1>(edge) == destNodeId;
@@ -178,17 +179,11 @@ void Graph::removeEdge(int srcNodeId, int destNodeId) {
     if (it != src.edgeList.end()) {
         src.edgeList.erase(it);
     }
+}
 
-    // Since the graph is directed
-    Node& dest = nodes[id_to_index_mapping[destNodeId]];
-    it = find_if(dest.edgeList.begin(), dest.edgeList.end(),
-        [&](const tuple<int, int, int>& edge) {
-            return get<0>(edge) == destNodeId && get<1>(edge) == srcNodeId;
-        });
-
-    if (it != dest.edgeList.end()) {
-        dest.edgeList.erase(it);
-    }
+void Graph::removeUndirectedEdge(int srcNodeId, int destNodeId) {
+    removeEdge(srcNodeId, destNodeId);
+    removeEdge(destNodeId, srcNodeId);  // Since the graph is undirected
 }
 
 void Graph::addNode(int nodeId, int nodeLabel) {
@@ -203,9 +198,15 @@ void Graph::addNode(int nodeId, int nodeLabel) {
 }
 
 void Graph::removeNode(int nodeId) {
-    int nodeIndex = id_to_index_mapping[nodeId];
+    auto it = id_to_index_mapping.find(nodeId);
+    if (it == id_to_index_mapping.end()) {
+        throw runtime_error("Node with id " + to_string(nodeId) + " not found in id to index mapping.");
+    }
+    int nodeIndex = it->second;
+
+    const Node& node = nodes[nodeIndex];
     // Remove edge entry from all neighbors
-    for (const auto& edge: nodes[nodeIndex].edgeList) {
+    for (const auto& edge: node.edgeList) {
         removeEdge(get<1>(edge), nodeId);
     }
 
