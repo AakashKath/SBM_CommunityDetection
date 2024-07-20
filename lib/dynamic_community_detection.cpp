@@ -57,7 +57,7 @@ double DynamicCommunityDetection::modularity(const Graph& auxiliary_graph) const
     }
 
     double q = 0.0;
-    vector<int> degrees(auxiliary_graph.nodes.size(), 0);
+    unordered_map<int, int> degrees{};
 
     // Degree counts weight on edge as well
     for (const Node& node: auxiliary_graph.nodes) {
@@ -65,7 +65,7 @@ double DynamicCommunityDetection::modularity(const Graph& auxiliary_graph) const
         for (const auto& edge: node.edgeList) {
             degreeWeight += get<2>(edge);
         }
-        degrees[node.id] = degreeWeight;
+        degrees.emplace(node.id, degreeWeight);
     }
 
     for (const Node& srcNode: auxiliary_graph.nodes) {
@@ -73,8 +73,12 @@ double DynamicCommunityDetection::modularity(const Graph& auxiliary_graph) const
             int destNodeId = get<1>(edge);
             int weight = get<2>(edge);
             const Node& destNode = auxiliary_graph.getNode(destNodeId);
-            if (srcNode.label == destNode.label) {
-                q += (weight - static_cast<double>(degrees[srcNode.id] * degrees[destNodeId]) / (2.0 * m));
+            try {
+                if (srcNode.label == destNode.label) {
+                    q += (weight - static_cast<double>(degrees.at(srcNode.id) * degrees.at(destNodeId)) / (2.0 * m));
+                }
+            } catch (const out_of_range& e) {
+                throw out_of_range("Node " + to_string(srcNode.id) + " or " + to_string(destNodeId) + " not found.");
             }
         }
     }
@@ -116,9 +120,13 @@ vector<pair<int, int>> DynamicCommunityDetection::oneLevel(Graph& auxiliary_grap
 
         for (int community: neighboring_communities) {
             // Temporarily move node to new community
-            for (int nodeId: communities[current_community]) {
-                Node& movedNode = auxiliary_graph.getNode(nodeId);
-                movedNode.label = community;
+            try {
+                for (int nodeId: communities.at(current_community)) {
+                    Node& movedNode = auxiliary_graph.getNode(nodeId);
+                    movedNode.label = community;
+                }
+            } catch (const out_of_range& e) {
+                cerr << "Cannot move to temp community. Community " << current_community << " not found. Please check the erase code at the end of the method." << endl;
             }
 
             double updated_modularity = modularity(auxiliary_graph);
@@ -131,22 +139,36 @@ vector<pair<int, int>> DynamicCommunityDetection::oneLevel(Graph& auxiliary_grap
             }
 
             // Move the node back to its original community
-            for (int nodeId: communities[current_community]) {
-                Node& movedNode = auxiliary_graph.getNode(nodeId);
-                movedNode.label = current_community;
+            try {
+                for (int nodeId: communities.at(current_community)) {
+                    Node& movedNode = auxiliary_graph.getNode(nodeId);
+                    movedNode.label = current_community;
+                }
+            } catch (const out_of_range& e) {
+                cerr << "Cannot revert back to original community. Community " << current_community << " not found. Please check the erase code at the end of the method." << endl;
             }
         }
 
         // Move node to the best community found
         if (best_community != current_community) {
             initial_modularity = best_modularity;
-            for (int nodeId: communities[current_community]) {
-                Node& movedNode = auxiliary_graph.getNode(nodeId);
-                movedNode.label = best_community;
-                changed_aux_nodes.insert(nodeId);
+            try {
+                for (int nodeId: communities.at(current_community)) {
+                    Node& movedNode = auxiliary_graph.getNode(nodeId);
+                    movedNode.label = best_community;
+                    changed_aux_nodes.insert(nodeId);
+                }
+            } catch (const out_of_range& e) {
+                cerr << "Cannot move to best community. Community " << current_community << " not found. Please check the erase code at the end of the method." << endl;
             }
-            communities[best_community].insert(communities[best_community].end(), communities[current_community].begin(), communities[current_community].end());
-            communities.erase(current_community);
+            try {
+                communities.at(best_community).insert(communities.at(best_community).end(), communities.at(current_community).begin(), communities.at(current_community).end());
+                communities.erase(current_community);
+            } catch (const out_of_range& e) {
+                cerr << "Cannot delete communities. Community " << current_community << " or " << best_community << " not found. Please check the erase code at the end of the method." << endl;
+            } catch (const exception& e) {
+                throw runtime_error("An unexpected error occurred: " + string(e.what()));
+            }
         }
     }
 
@@ -183,7 +205,7 @@ void DynamicCommunityDetection::partitionToGraph() {
     for (const auto& community: communities) {
         partitioned_graph.nodes[index].id = community.first;
         partitioned_graph.nodes[index].label = community.first;
-        new_id_to_index_mapping[community.first] = index;
+        new_id_to_index_mapping.emplace(community.first, index);
         index++;
     }
     partitioned_graph.id_to_index_mapping = new_id_to_index_mapping;
