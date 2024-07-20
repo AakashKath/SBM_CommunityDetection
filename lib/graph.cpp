@@ -14,7 +14,7 @@ Node::~Node() {
 Graph::Graph(int numberNodes) {
     for (int i = 0; i < numberNodes; ++i) {
         nodes.emplace_back(i);
-        id_to_index_mapping[i] = i;
+        id_to_index_mapping.emplace(i, i);
     }
 }
 
@@ -120,7 +120,7 @@ int Graph::getTotalEdges() const {
 const Node& Graph::getNode(int nodeId) const {
     auto it = id_to_index_mapping.find(nodeId);
     if (it == id_to_index_mapping.end()) {
-        throw runtime_error("Node with id " + to_string(nodeId) + " not found in id to index mapping.");
+        throw out_of_range("Node with id " + to_string(nodeId) + " not found in id to index mapping.");
     }
     return nodes[it->second];
 }
@@ -128,7 +128,7 @@ const Node& Graph::getNode(int nodeId) const {
 Node& Graph::getNode(int nodeId) {
     auto it = id_to_index_mapping.find(nodeId);
     if (it == id_to_index_mapping.end()) {
-        throw runtime_error("Node with id " + to_string(nodeId) + " not found in id to index mapping.");
+        throw out_of_range("Node with id " + to_string(nodeId) + " not found in id to index mapping.");
     }
     return nodes[it->second];
 }
@@ -173,7 +173,7 @@ void Graph::removeEdge(int srcNodeId, int destNodeId) {
     Node& src = getNode(srcNodeId);
     auto it = find_if(src.edgeList.begin(), src.edgeList.end(),
                 [&](const tuple<int, int, int>& edge) {
-                    return get<0>(edge) == srcNodeId && get<1>(edge) == destNodeId;
+                    return get<1>(edge) == destNodeId;
                 });
 
     if (it != src.edgeList.end()) {
@@ -194,28 +194,30 @@ void Graph::addNode(int nodeId, int nodeLabel) {
 
     // Update mappings
     int nodeIndex = id_to_index_mapping.size();
-    id_to_index_mapping[nodeId] = nodeIndex;
+    id_to_index_mapping.emplace(nodeId, nodeIndex);
 }
 
 void Graph::removeNode(int nodeId) {
-    auto it = id_to_index_mapping.find(nodeId);
-    if (it == id_to_index_mapping.end()) {
-        throw runtime_error("Node with id " + to_string(nodeId) + " not found in id to index mapping.");
-    }
-    int nodeIndex = it->second;
+    try {
+        int nodeIndex = id_to_index_mapping.at(nodeId);
 
-    const Node& node = nodes[nodeIndex];
-    // Remove edge entry from all neighbors
-    for (const auto& edge: node.edgeList) {
-        removeEdge(get<1>(edge), nodeId);
-    }
+        const Node& node = nodes[nodeIndex];
+        // Remove edge entry from all neighbors
+        for (const auto& edge: node.edgeList) {
+            removeEdge(get<1>(edge), nodeId);
+        }
 
-    // Remove node from list
-    nodes.erase(nodes.begin() + nodeIndex);
+        // Remove node from list
+        nodes.erase(nodes.begin() + nodeIndex);
 
-    // Update mappings
-    id_to_index_mapping.erase(nodeId);
-    for (int i = nodeIndex; i < nodes.size(); ++i) {
-        id_to_index_mapping[nodes[i].id] = i;
+        // Update mappings
+        id_to_index_mapping.erase(nodeId);
+        for (int i = nodeIndex; i < nodes.size(); ++i) {
+            id_to_index_mapping[nodes[i].id] = i;
+        }
+    } catch (const out_of_range& e) {
+        cerr << "Node with id " << nodeId << " not found in id to index mapping." << endl;
+    } catch (const std::exception& e) {
+        throw runtime_error("An error occurred while removing the node: " + string(e.what()));
     }
 }
