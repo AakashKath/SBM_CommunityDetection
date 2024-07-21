@@ -183,7 +183,10 @@ void Graph::removeEdge(int srcNodeId, int destNodeId) {
 
 void Graph::removeUndirectedEdge(int srcNodeId, int destNodeId) {
     removeEdge(srcNodeId, destNodeId);
-    removeEdge(destNodeId, srcNodeId);  // Since the graph is undirected
+    // Since the graph is undirected
+    if (srcNodeId != destNodeId) {
+        removeEdge(destNodeId, srcNodeId);
+    }
 }
 
 void Graph::addNode(int nodeId, int nodeLabel) {
@@ -204,7 +207,10 @@ void Graph::removeNode(int nodeId) {
         const Node& node = nodes[nodeIndex];
         // Remove edge entry from all neighbors
         for (const auto& edge: node.edgeList) {
-            removeEdge(get<1>(edge), nodeId);
+            int targetNodeId = get<1>(edge);
+            if (targetNodeId != nodeId) {
+                removeEdge(targetNodeId, nodeId);
+            }
         }
 
         // Remove node from list
