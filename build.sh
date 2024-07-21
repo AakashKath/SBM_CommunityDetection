@@ -9,15 +9,15 @@ mkdir -p build
 cd build
 
 # Run cmake and make
-cmake .. -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER=Address # Used for memory leakage detection
+cmake .. -DCMAKE_BUILD_TYPE=Debug # -DUSE_SANITIZER=Address # Used for memory leakage detection
 make
 
 # Navigate back to the project root
 cd ..
 
 # Notify the user where the executable is located
-echo "Executable created in bin directory."
+echo "Executable created in build/bin directory."
 
-# TODO: Maybe run the executable
+# To run the program use below command
 # ./build/bin/SBM_CommunityDetection
 # rm -r build
