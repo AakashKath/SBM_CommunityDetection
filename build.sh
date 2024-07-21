@@ -5,7 +5,7 @@ check_and_install() {
     PKG_NAME=$1
     if ! dpkg -l | grep -q "^ii  $PKG_NAME "; then
         echo "$PKG_NAME is not installed. Installing..."
-        # sudo apt install -y $PKG_NAME
+        sudo apt install -y $PKG_NAME
     else
         echo "$PKG_NAME is already installed."
     fi
