@@ -11,6 +11,7 @@ check_and_install() {
     fi
 }
 
+sudo apt update
 # Check and install necessary packages
 check_and_install cmake
 check_and_install build-essential
