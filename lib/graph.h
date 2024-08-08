@@ -17,6 +17,7 @@ class Node {
         int offset;
         // TODO: need to store only address, all edge info will be stored in a very long list
         vector<tuple<int, int, int>> edgeList; // {src, dest, weight}
+        unordered_map<int, vector<double>> messages;
 
         Node(int id);
         ~Node();

@@ -5,9 +5,36 @@
 #include <cmath>
 
 
-BeliefPropagation::BeliefPropagation(Graph graph, int communityCount, int impactRadius, double intra_community_edge_probability, double inter_community_edge_probability): bp_graph(graph), communityCount(communityCount), impactRadius(impactRadius), intra_community_edge_probability(intra_community_edge_probability), inter_community_edge_probability(inter_community_edge_probability) {
-    for (int t = 0; t < bp_graph.nodes.size(); ++t) {
-        processVertex(t);
+BeliefPropagation::BeliefPropagation(Graph graph, int communityCount, int impactRadius, double intra_community_edge_probability, double inter_community_edge_probability, vector<pair<int, int>> addedEdges, vector<pair<int, int>> removedEdges): bp_graph(graph), communityCount(communityCount), impactRadius(impactRadius), intra_community_edge_probability(intra_community_edge_probability), inter_community_edge_probability(inter_community_edge_probability), alphaValue(1 - 1 / communityCount) {
+    // Initialize noise as random numbers
+    mt19937 gen(rd());
+    uniform_int_distribution<int> dist(0, communityCount - 2);
+    uniform_real_distribution<double> prob_dist(0.0, 1.0);
+    int noiseCommunity;
+    for (const Node& node: bp_graph.nodes) {
+        if (prob_dist(gen) > alphaValue) {
+            noiseCommunity = node.label;
+        } else {
+            noiseCommunity = dist(gen);
+            if (noiseCommunity >= node.label) {
+                noiseCommunity += 1;
+            }
+        }
+        sideInformation.emplace(node.id, noiseCommunity);
+    }
+
+    // Add edge and update corresponding message vector
+    for (const auto& [node1Id, node2Id]: addedEdges) {
+        bp_graph.addUndirectedEdge(node1Id, node2Id);
+        processVertex(node1Id, node2Id);
+        processVertex(node2Id, node1Id);
+    }
+
+    // Remove edge and update corresponding message vector
+    for (const auto& [node1Id, node2Id]: removedEdges) {
+        bp_graph.removeUndirectedEdge(node1Id, node2Id);
+        processVertex(node1Id, node2Id);
+        processVertex(node2Id, node1Id);
     }
 }
 
@@ -15,87 +42,115 @@ BeliefPropagation::~BeliefPropagation() {
     // Nothing to clean
 }
 
-void BeliefPropagation::processVertex(int nodeId) {
+void BeliefPropagation::processVertex(int nodeId, int involvedNeighborId) {
     const Node& node = bp_graph.getNode(nodeId);
 
     // Update incoming messsages for the new vertex
     for (const auto& edge: node.edgeList) {
-        int w = get<1>(edge);
-        messages[w][nodeId] = StreamBP(messages[w], bp_graph.getNode(w).label);
+        int neighborId = get<1>(edge);
+
+        // Skip if the neighbor was added in current iteration
+        if (neighborId == involvedNeighborId) {
+            continue;
+        }
+
+        Node& neighbor = bp_graph.getNode(neighborId);
+        neighbor.messages[nodeId] = StreamBP(neighbor, {nodeId, involvedNeighborId}, sideInformation.at(neighborId));
     }
 
     // Update outgoing messages up to R hops
+    unordered_map<int, vector<pair<int, int>>> RNeighborhood = collectRNeighborhood(nodeId, impactRadius);
     for (int radius = 1; radius <= impactRadius; ++radius) {
-        for (int v: collectRNeighborhood(nodeId, radius)) {
-            int v_prime = -1;
-            double minDist = numeric_limits<double>::max();
-            for (const auto& edge: bp_graph.getNode(v).edgeList) {
-                int w = get<1>(edge);
-                if (messages[w].find(v) != messages[w].end()) {
-                    double dist = get<2>(edge);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        v_prime = w;
-                    }
-                }
+        if (RNeighborhood.find(radius) != RNeighborhood.end()) {
+            for (const auto& [rNodeId, rParentId]: RNeighborhood.at(radius)) {
+                Node& rParent = bp_graph.getNode(rParentId);
+                rParent.messages[rNodeId] = StreamBP(rParent, {nodeId, involvedNeighborId, rNodeId}, sideInformation.at(rParentId));
             }
-            if (v_prime != -1) {
-                messages[v_prime][v] = StreamBP(messages[v_prime], bp_graph.getNode(v_prime).label);
-            }
+        } else {
+            cout << "Radius " << radius << " not found in R-Neighborhood." << endl;
         }
     }
 }
 
-vector<double> BeliefPropagation::StreamBP(const unordered_map<int, vector<double>>& incomingMessages, int noiseLabel) {
+double BeliefPropagation::BP_0(int noiseLabel, int currentCommunity) {
+    return (alphaValue + (communityCount - 1 - communityCount * alphaValue) * (noiseLabel == currentCommunity) ) / (communityCount - 1);
+}
+
+vector<double> BeliefPropagation::StreamBP(const Node& node, vector<int> excludedNodeIds, int noiseLabel) {
     vector<double> result(communityCount, 1.0);
 
-    for(const auto& message: incomingMessages) {
-        const vector<double>& m = message.second;
+    for (const auto& edge: node.edgeList) {
+        int neighborId = get<1>(edge);
+
+        // Don't count excluded nodes in message re-calculation
+        if (find(excludedNodeIds.begin(), excludedNodeIds.end(), neighborId) != excludedNodeIds.end()) {
+            continue;
+        }
+
+        const Node& neighbor = bp_graph.getNode(neighborId);
         for (int s = 0; s < communityCount; ++s) {
-            result[s] *= (inter_community_edge_probability + (intra_community_edge_probability - inter_community_edge_probability) * m[s]);
+            result[s] *= (inter_community_edge_probability + (intra_community_edge_probability - inter_community_edge_probability) * neighbor.messages.at(node.id)[s]) * BP_0(noiseLabel, s);
         }
     }
 
     double Z = accumulate(result.begin(), result.end(), 0.0);
-    for (double& val: result) {
-        val /= Z;
+    if (Z != 0) {
+        for (double& val: result) {
+            val /= Z;
+        }
     }
 
     return result;
 }
 
-vector<int> BeliefPropagation::getCommunityLabels() {
-    vector<int> labels(bp_graph.nodes.size());
+unordered_map<int, int> BeliefPropagation::getCommunityLabels() {
+    unordered_map<int, int> labels{};
+    vector<double> message;
 
-    for (const auto& belief: beliefs) {
-        int u = belief.first;
-        const vector<double>& beliefVec = belief.second;
-        labels[u] = distance(beliefVec.begin(), max_element(beliefVec.begin(), beliefVec.end()));
+    for (const Node& node: bp_graph.nodes) {
+        message = StreamBP(node, {}, sideInformation.at(node.id));
+        labels.emplace(node.id, distance(message.begin(), max_element(message.begin(), message.end())));
     }
 
     return labels;
 }
 
-unordered_set<int> BeliefPropagation::collectRNeighborhood(int nodeId, int radius) {
-    unordered_set<int> neighborhood;
-    queue<int> q;
-    unordered_map<int, int> distances;
-    q.push(nodeId);
-    distances[nodeId] = 0;
+unordered_map<int, vector<pair<int, int>>> BeliefPropagation::collectRNeighborhood(int nodeId, int radius) {
+    unordered_map<int, vector<pair<int, int>>> neighborhood;
+    unordered_set<int> visitedNodes;
 
-    while(!q.empty()) {
-        int current = q.front();
-        q.pop();
-        int currentDistance = distances[current];
+    // Custom operator for priority queu to sort by distance
+    auto cmp = [](const pair<int, int>& left, const pair<int, int>& right) {
+        return left.second > right.second;
+    };
 
-        if (currentDistance < radius) {
-            for (const auto& edge: bp_graph.getNode(current).edgeList) {
-                int w = get<1>(edge);
-                if (distances.find(w) == distances.end()) {
-                    q.push(w);
-                    distances[w] = currentDistance + 1;
-                    neighborhood.insert(w);
-                }
+    priority_queue<pair<int, int>, vector<pair<int, int>>, decltype(cmp)> distQueue(cmp);
+    distQueue.emplace(nodeId, 0);
+    visitedNodes.emplace(nodeId);
+
+    int currentDistance;
+    int nextDistance;
+
+    while(!distQueue.empty()) {
+        pair<int, int> topElement = distQueue.top();
+        int currentNodeId = topElement.first;
+        const Node& node = bp_graph.getNode(currentNodeId);
+        currentDistance = topElement.second;
+        distQueue.pop();
+
+        for (const auto& edge: node.edgeList) {
+            int nextNodeId = get<1>(edge);
+
+            // Skip loops
+            if (visitedNodes.find(nextNodeId) != visitedNodes.end()) {
+                continue;
+            }
+
+            int edgeWeight = get<2>(edge);
+            nextDistance = currentDistance + edgeWeight;
+            if (nextDistance <= radius) {
+                distQueue.emplace(nextNodeId, nextDistance);
+                neighborhood[nextDistance].emplace_back(nextNodeId, currentNodeId);
             }
         }
     }

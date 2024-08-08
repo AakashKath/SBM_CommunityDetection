@@ -90,11 +90,11 @@ int main(int argc, char* argv[]) {
         cout << "Node: " << i << " Community: " << predicted_labels[i] << endl;
     }
 
-    // BeliefPropagation bp(sbm.sbm_graph, communities, radius, intra_community_edge_probability, inter_community_edge_probability);
-    // vector<int> labels = bp.getCommunityLabels();
-    // for (int i = 0; i < labels.size(); ++i) {
-    //     cout << "Node: " << i << " Community: " << labels[i] << endl;
-    // }
+    BeliefPropagation bp(sbm.sbm_graph, communities, radius, intra_community_edge_probability, inter_community_edge_probability, addedEdges, removedEdges);
+    unordered_map<int, int> labels = bp.getCommunityLabels();
+    for (const auto& label: labels) {
+        cout << "Node: " << label.first << " Community: " << label.second << endl;
+    }
 
     return 0;
 }

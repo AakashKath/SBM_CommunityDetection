@@ -5,7 +5,7 @@
 #include <graphviz/gvc.h>
 #include <map>
 
-Node::Node(int id): id(id), label(-1), offset(-1), edgeList{} {}
+Node::Node(int id): id(id), label(-1), offset(-1), edgeList{}, messages{} {}
 
 Node::~Node() {
     // Nothing to clean
