@@ -97,7 +97,7 @@ Graph Sbm::generateSbm() {
             usedNumbers.insert(num);
 
             // Assign labels to vertices
-            Node node = graph.getNode(num);
+            Node& node = graph.getNode(num);
             node.label = i;
             node.offset = j;
 
