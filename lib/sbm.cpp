@@ -108,12 +108,3 @@ Graph Sbm::generateSbm() {
 
     return graph;
 }
-
-vector<int> Sbm::listLabels() {
-    vector<int> labels(sbm_graph.nodes.size());
-    for (const auto& node: sbm_graph.nodes) {
-        labels[node.id] = node.label;
-    }
-
-    return labels;
-}

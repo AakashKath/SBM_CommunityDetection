@@ -30,7 +30,6 @@ class Sbm {
 
         Graph sbm_graph;
 
-        vector<int> listLabels();
         pair<int, int> generateEdge();
 };
 
