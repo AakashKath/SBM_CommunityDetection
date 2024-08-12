@@ -133,7 +133,6 @@ Node& Graph::getNode(int nodeId) {
     return nodes[it->second];
 }
 
-// TODO: `find_if` can be moved to a getEdge function
 void Graph::addEdge(int srcNodeId, int destNodeId, int edgeWeight) {
     // Don't add edge entry if edge weight is 0
     if (edgeWeight == 0) {
@@ -226,4 +225,13 @@ void Graph::removeNode(int nodeId) {
     } catch (const std::exception& e) {
         throw runtime_error("An error occurred while removing the node: " + string(e.what()));
     }
+}
+
+unordered_map<int, int> Graph::getLabels() {
+    unordered_map<int, int> predicted_labels{};
+    for (const auto& node: nodes) {
+        predicted_labels.emplace(node.id, node.label);
+    }
+
+    return predicted_labels;
 }

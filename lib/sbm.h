@@ -15,7 +15,7 @@ class Sbm {
         int numberCommunities;
         double intraCommunityEdgeProbability;
         double interCommunityEdgeProbability;
-        double bias;
+        double communityBoundaryThreshold;
         vector<vector<int>> communityTracker;
         mt19937 gen;
 

@@ -17,7 +17,6 @@ typedef vector<unordered_set<int>> Communities;
 
 class DynamicCommunityDetection {
     private:
-        Graph c_ll;
         Graph c_ul;
         double mod, old_mod;
 
@@ -32,10 +31,10 @@ class DynamicCommunityDetection {
         void syncCommunities(const pair<int, int>& involved_communities, const unordered_set<int>& anodes);
 
     public:
+        Graph c_ll;
+
         DynamicCommunityDetection(Graph graph, vector<pair<int, int>> addedEdges, vector<pair<int, int>> removedEdges);
         ~DynamicCommunityDetection();
-
-        unordered_map<int, int> getPredictedLabels();
 };
 
 #endif // DYNAMIC_COMMUNITY_DETECTION_H

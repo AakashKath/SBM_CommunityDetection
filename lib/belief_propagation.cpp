@@ -36,6 +36,8 @@ BeliefPropagation::BeliefPropagation(Graph graph, int communityCount, int impact
         processVertex(node1Id, node2Id);
         processVertex(node2Id, node1Id);
     }
+
+    updateLabels();
 }
 
 BeliefPropagation::~BeliefPropagation() {
@@ -103,18 +105,6 @@ vector<double> BeliefPropagation::StreamBP(const Node& node, vector<int> exclude
     return result;
 }
 
-unordered_map<int, int> BeliefPropagation::getCommunityLabels() {
-    unordered_map<int, int> labels{};
-    vector<double> message;
-
-    for (const Node& node: bp_graph.nodes) {
-        message = StreamBP(node, {}, sideInformation.at(node.id));
-        labels.emplace(node.id, distance(message.begin(), max_element(message.begin(), message.end())));
-    }
-
-    return labels;
-}
-
 unordered_map<int, vector<pair<int, int>>> BeliefPropagation::collectRNeighborhood(int nodeId, int radius) {
     unordered_map<int, vector<pair<int, int>>> neighborhood;
     unordered_set<int> visitedNodes;
@@ -156,4 +146,13 @@ unordered_map<int, vector<pair<int, int>>> BeliefPropagation::collectRNeighborho
     }
 
     return neighborhood;
+}
+
+void BeliefPropagation::updateLabels() {
+    vector<double> message;
+
+    for (Node& node: bp_graph.nodes) {
+        message = StreamBP(node, {}, sideInformation.at(node.id));
+        node.label = distance(message.begin(), max_element(message.begin(), message.end()));
+    }
 }

@@ -281,11 +281,3 @@ void DynamicCommunityDetection::syncCommunities(const pair<int, int>& involved_c
         }
     }
 }
-
-unordered_map<int, int> DynamicCommunityDetection::getPredictedLabels() {
-    unordered_map<int, int> predicted_labels{};
-    for (const auto& node: c_ll.nodes) {
-        predicted_labels[node.id] = node.label;
-    }
-    return predicted_labels;
-}

@@ -13,13 +13,12 @@ using namespace std;
 // BeliefPropagation class
 class BeliefPropagation {
     public:
+        Graph bp_graph;
+
         BeliefPropagation(Graph graph, int communityCount, int impactRadius, double intra_community_edge_probability, double inter_community_edge_probability, vector<pair<int, int>> addedEdges, vector<pair<int, int>> removedEdges);
         ~BeliefPropagation();
 
-        unordered_map<int, int> getCommunityLabels();
-
     private:
-        Graph bp_graph;
         int impactRadius;
         int communityCount;
         double intra_community_edge_probability;
@@ -33,6 +32,7 @@ class BeliefPropagation {
         vector<double> StreamBP(const Node& node, vector<int> excludedNodeIds, int noiseLabel);
         unordered_map<int, vector<pair<int, int>>> collectRNeighborhood(int nodeId, int radius);
         double BP_0(int noiseLabel, int currentCommunity);
+        void updateLabels();
 };
 
 #endif // BELIEF_PROPAGATION_H

@@ -44,6 +44,7 @@ class Graph {
         void removeNode(int nodeId);
         const Node& getNode(int nodeId) const;
         Node& getNode(int nodeId);
+        unordered_map<int, int> getLabels();
 };
 
 #endif // GRAPH_H

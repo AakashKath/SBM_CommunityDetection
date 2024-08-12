@@ -9,20 +9,17 @@ Sbm::Sbm(int numberNodes, int numberCommunities, double intraCommunityEdgeProbab
     communityTracker(numberCommunities, vector<int>(numberNodes/numberCommunities, -1)) {
 
     // Create a random number generator
-    // TODO: seed not working properly
     random_device rd;
     mt19937 gen(rd());
-    // mt19937 gen(static_cast<unsigned int>(time(nullptr)));
 
     // Generate graph with no edges
     sbm_graph = generateSbm();
 
-    // Calculate bias for edge generation
+    // Calculate communityBoundaryThreshold for edge generation
     double chooseNodesFromSameCommunity = numberCommunities * (1.0 / ((numberNodes / numberCommunities + 1) * betal(numberNodes / numberCommunities - 1, 3)));
     double intraCommunityWeight = chooseNodesFromSameCommunity * intraCommunityEdgeProbability;
-    // TODO: Check correctness
     double interCommunityWeight = (1.0 / ((numberNodes + 1) * betal(numberNodes - 1, 3)) - chooseNodesFromSameCommunity) * interCommunityEdgeProbability;
-    double bias = intraCommunityWeight / (interCommunityWeight + intraCommunityWeight);
+    double communityBoundaryThreshold = intraCommunityWeight / (interCommunityWeight + intraCommunityWeight);
 }
 
 Sbm::~Sbm() {
@@ -73,7 +70,7 @@ bool Sbm::isIntraCommunityEdge() {
     uniform_real_distribution<double> dis(0.0, 1.0);
 
     // Return true for intra community edge, and false for inter community edge
-    return dis(gen) < bias;
+    return dis(gen) < communityBoundaryThreshold;
 }
 
 Graph Sbm::generateSbm() {
