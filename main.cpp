@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
     vector<pair<int, int>> removedEdges = {};
 
     if (algorithm_number == 1) {
-        DynamicCommunityDetection dcd(sbm.sbm_graph, addedEdges, removedEdges);
+        DynamicCommunityDetection dcd(sbm.sbm_graph, communities, addedEdges, removedEdges);
         unordered_map<int, int> predicted_labels = dcd.c_ll.getLabels();
         for (const auto& label: predicted_labels) {
             cout << "Node: " << label.first << " Community: " << label.second << endl;

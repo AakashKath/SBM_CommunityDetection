@@ -109,7 +109,7 @@ unordered_map<int, vector<pair<int, int>>> BeliefPropagation::collectRNeighborho
     unordered_map<int, vector<pair<int, int>>> neighborhood;
     unordered_set<int> visitedNodes;
 
-    // Custom operator for priority queu to sort by distance
+    // Custom operator for priority queue to sort by distance
     auto cmp = [](const pair<int, int>& left, const pair<int, int>& right) {
         return left.second > right.second;
     };

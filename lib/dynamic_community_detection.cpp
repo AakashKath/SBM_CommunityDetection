@@ -1,7 +1,7 @@
 #include "dynamic_community_detection.h"
 
 
-DynamicCommunityDetection::DynamicCommunityDetection(Graph graph, vector<pair<int, int>> addedEdges, vector<pair<int, int>> removedEdges): c_ll(graph), c_ul(Graph(0)) {
+DynamicCommunityDetection::DynamicCommunityDetection(Graph graph, int communityCount, vector<pair<int, int>> addedEdges, vector<pair<int, int>> removedEdges): c_ll(graph), c_ul(Graph(0)), communityCount(communityCount) {
     Graph c_aux = c_ll;
     initialPartition(c_aux);
     mod = modularity(c_aux);
@@ -33,6 +33,9 @@ DynamicCommunityDetection::DynamicCommunityDetection(Graph graph, vector<pair<in
 
         c_aux = c_ul;
     } while (mod > old_mod || m < addedEdges.size() || n < removedEdges.size());
+
+    // Merge communities to expected number (Using Best Fit bin packing algorithm)
+    mergeCommunities();
 }
 
 DynamicCommunityDetection::~DynamicCommunityDetection() {
@@ -278,6 +281,56 @@ void DynamicCommunityDetection::syncCommunities(const pair<int, int>& involved_c
             } else {
                 c_ul.addUndirectedEdge(src, destNode.label, weight);
             }
+        }
+    }
+}
+
+void DynamicCommunityDetection::mergeCommunities() {
+    unordered_map<int, vector<int>> communityMap{};
+    for (const Node& node: c_ll.nodes) {
+        communityMap[node.label].push_back(node.id);
+    }
+    vector<pair<int, vector<int>>> communityVector(communityMap.begin(), communityMap.end());
+    sort(communityVector.begin(), communityVector.end(), [](const pair<int, vector<int>>& left, const pair<int, vector<int>>& right) {
+        return left.second.size() > right.second.size();
+    });
+
+    int binCapacity = ceil(c_ll.nodes.size() / communityCount);
+    vector<tuple<int, int, vector<int>>> binStore;
+
+    int min, minIndex, binRemainingCapacity;
+    for (auto community: communityVector) {
+        int communitySize = community.second.size();
+
+        // Add new separate entry if community size is already more than expected
+        if (communitySize >= binCapacity) {
+            binStore.emplace_back(0, community.first, community.second);
+            continue;
+        }
+
+        min = binCapacity + 1;
+        for (int i = 0; i < binStore.size(); ++i) {
+            binRemainingCapacity = get<0>(binStore[i]);
+            if (binRemainingCapacity >= communitySize && binRemainingCapacity - communitySize < min) {
+                min = binRemainingCapacity - communitySize;
+                minIndex = i;
+            }
+        }
+
+        if (min == binCapacity + 1) {
+            binStore.emplace_back(binCapacity - communitySize, community.first, community.second);
+        } else {
+            get<0>(binStore[minIndex]) -= communitySize;
+            get<2>(binStore[minIndex]).insert(get<2>(binStore[minIndex]).end(), community.second.begin(), community.second.end());
+        }
+    }
+
+    // Update the merged community labels
+    for (auto bin: binStore) {
+        int updatedLabel = get<1>(bin);
+        for (int nodeId: get<2>(bin)) {
+            Node& node = c_ll.getNode(nodeId);
+            node.label = updatedLabel;
         }
     }
 }
