@@ -1,5 +1,5 @@
 #include "graph.h"
-#include "color_map.h"
+#include "utils/color_map.h"
 
 #include <graphviz/cgraph.h>
 #include <graphviz/gvc.h>

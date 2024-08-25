@@ -18,6 +18,7 @@ set(LIBRARY_NAME
 # Collect all source files in the src and lib directories
 file(GLOB SRC_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 file(GLOB LIB_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/*.cpp)
+file(GLOB UTILS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/utils/*.cpp)
 
 # Find Graphviz package
 find_package(PkgConfig REQUIRED)
@@ -26,8 +27,11 @@ pkg_check_modules(GRAPHVIZ REQUIRED libgvc libcdt)
 # Include Graphviz directories
 include_directories(${GRAPHVIZ_INCLUDE_DIRS})
 
+# Add nlohmann/json
+add_subdirectory(lib/json)
+
 # Add executable target with source files
-add_executable(${LIBRARY_NAME} src/main.cpp ${SRC_SOURCES} ${LIB_SOURCES})
+add_executable(${LIBRARY_NAME} src/main.cpp ${SRC_SOURCES} ${LIB_SOURCES} ${UTILS_SOURCES})
 
 # Link Graphviz libraries to your executable
 target_link_libraries(${LIBRARY_NAME} ${GRAPHVIZ_LIBRARIES})
@@ -44,6 +48,12 @@ $<INSTALL_INTERFACE:/include/StreamBP>
 target_include_directories(${LIBRARY_NAME} PUBLIC
 $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 $<INSTALL_INTERFACE:include>
+)
+
+# Include json library
+target_include_directories(${LIBRARY_NAME} PRIVATE
+$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/json/single_include>
+$<INSTALL_INTERFACE:/lib/json/single_include>
 )
 
 # Include root project path
