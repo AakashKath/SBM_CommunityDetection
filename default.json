@@ -1,0 +1,10 @@
+{
+    "nodes": 20,
+    "edges": 50,
+    "communities": 5,
+    "radius": 3,
+    "intra_community_edge_probability": 0.9,
+    "inter_community_edge_probability": 0.1,
+    "algorithm_number": 2,
+    "uneven_node_distribution": false
+}
