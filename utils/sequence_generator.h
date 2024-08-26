@@ -1,5 +1,5 @@
 #ifndef SEQUENCE_GENERATOR_H
-#define SEQUENCE_GENERATOR_HCOLOR_MAP_H
+#define SEQUENCE_GENERATOR_H
 
 #include <iostream>
 #include <fstream>
@@ -11,6 +11,5 @@
 using namespace std;
 
 void generateSequence(const string& filename = "default.json");
-
 
 #endif // SEQUENCE_GENERATOR_H
