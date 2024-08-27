@@ -34,7 +34,8 @@
             "configurePreset": "default",
             "output": {
                 "verbosity": "verbose",
-                "debug": true
+                "debug": true,
+                "outputOnFailure": true
             }
         }
     ]

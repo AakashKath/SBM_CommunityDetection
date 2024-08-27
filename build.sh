@@ -64,13 +64,13 @@ git submodule update --init --recursive
 mkdir -p build
 
 # Run cmake to configure the project
-cmake . # -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER=Address # Used for memory leakage detection
+cmake --preset default # -DCMAKE_BUILD_TYPE=Debug -DUSE_SANITIZER=Address # Used for memory leakage detection
 
 # Build the project
-make
+cmake --build --preset default
 
 # Run the tests using CTest
-ctest --output-on-failure
+ctest --preset default
 
 # Navigate back to the project root
 cd ..
