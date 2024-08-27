@@ -31,8 +31,9 @@
 *.out
 *.app
 
-# build
+# build related files
 build/
+bin/
 
 # vscode settings
 .vscode/
