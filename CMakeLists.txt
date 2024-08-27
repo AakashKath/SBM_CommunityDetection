@@ -28,7 +28,7 @@ set(SUBMODULES
 
 find_package(Git QUIET)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
-# Update submodules as needed
+    # Update submodules as needed
     option(GIT_SUBMODULE "Check submodules during build" ON)
     if(GIT_SUBMODULE)
         message(STATUS "Submodule update")
@@ -49,9 +49,17 @@ endforeach()
 
 # Collect all source files in the src and lib directories
 file(GLOB SRC_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+list(REMOVE_ITEM SRC_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 file(GLOB LIB_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/*.cpp)
 file(GLOB UTILS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/utils/*.cpp)
 file(GLOB TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp)
+
+# Combine all source files into one list
+set(COMMON_SOURCES
+    ${SRC_SOURCES}
+    ${LIB_SOURCES}
+    ${UTILS_SOURCES}
+)
 
 # Find Graphviz package
 find_package(PkgConfig REQUIRED)
@@ -65,12 +73,12 @@ add_subdirectory(lib/json)
 add_subdirectory(lib/googletest)
 
 # Add executable target with source files
-add_executable(${LIBRARY_NAME} ${SRC_SOURCES} ${LIB_SOURCES} ${UTILS_SOURCES})
-add_executable(${TEST_NAME} ${TEST_SOURCES})
+add_executable(${LIBRARY_NAME} src/main.cpp ${COMMON_SOURCES})
+add_executable(${TEST_NAME} ${TEST_SOURCES} ${COMMON_SOURCES})
 
 # Link Graphviz libraries to your executable
 target_link_libraries(${LIBRARY_NAME} ${GRAPHVIZ_LIBRARIES})
-target_link_libraries(${TEST_NAME} gtest gtest_main)
+target_link_libraries(${TEST_NAME} gtest gtest_main ${GRAPHVIZ_LIBRARIES})
 
 # Include directories for the library
 set(COMMON_INCLUDED_DIRECTORIES
