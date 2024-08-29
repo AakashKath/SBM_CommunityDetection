@@ -7,9 +7,6 @@ project(SBM_CommunityDetection VERSION 0.1.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# Set output directories
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
 # Define library name
 set(LIBRARY_NAME
     SBM_CommunityDetection
@@ -46,6 +43,9 @@ foreach(SUBMODULE ${SUBMODULES})
         message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
     endif()
 endforeach()
+
+# Define a preprocessor definition with the PNG output directory
+add_compile_definitions(TEST_OUTPUT_DIRECTORY="${TEST_OUTPUT_DIRECTORY}")
 
 # Collect all source files in the src and lib directories
 file(GLOB SRC_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
