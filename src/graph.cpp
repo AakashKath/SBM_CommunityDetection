@@ -23,6 +23,9 @@ Graph::~Graph() {
 }
 
 void Graph::draw(const string &filename) {
+    // Create filepath
+    string filepath = TEST_OUTPUT_DIRECTORY + filename;
+
     // Create a new graph
     Agraph_t *g = agopen(const_cast<char*>("g"), Agundirected, NULL);
 
@@ -79,7 +82,7 @@ void Graph::draw(const string &filename) {
     gvLayout(gvc, g, "dot");
 
     // Render the graph to a file
-    gvRenderFilename(gvc, g, "png", filename.c_str());
+    gvRenderFilename(gvc, g, "png", filepath.c_str());
 
     // Free the layout and the graph
     gvFreeLayout(gvc, g);
