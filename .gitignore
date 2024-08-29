@@ -33,10 +33,6 @@
 
 # build related files
 build/
-bin/
 
 # vscode settings
 .vscode/
-
-# output images
-*.png
