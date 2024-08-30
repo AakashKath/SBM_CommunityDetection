@@ -2,7 +2,7 @@
 
 using namespace std;
 
-void generateSequence(const string& filename) {
+generated_sequence generateSequence(string filename) {
     // Required Parameters
     int nodes, edges, communities, radius, algorithm_number;
     double intra_community_edge_probability, inter_community_edge_probability;
@@ -15,7 +15,7 @@ void generateSequence(const string& filename) {
     ifstream input_file(fullPath);
     if (!input_file.is_open()) {
         cerr << "Could not open file " << fullPath << "." << endl;
-        return;
+        exit(EXIT_FAILURE);
     }
 
     if (filename == "default.json") {
@@ -67,8 +67,9 @@ void generateSequence(const string& filename) {
                                     : (algorithm_number == 2 ? "Belief Propagation"
                                     : "Unknown Algorithm"))
                                 << endl;
+    cout << "For now we add edges randomly." << endl;
     if (algorithm_number == 1) {
-        cout << "For now we add edges randomly." << endl;
+        // Unique algorithm 1 params
     }
     if (algorithm_number == 2) {
         cout << "Impact radius: " << radius << endl;
@@ -92,19 +93,11 @@ void generateSequence(const string& filename) {
     // TODO: Edge removal is still used for algo testing purposes
     vector<pair<int, int>> removedEdges = {};
 
-    if (algorithm_number == 1) {
-        DynamicCommunityDetection dcd(sbm.sbm_graph, communities, addedEdges, removedEdges);
-        unordered_map<int, int> predicted_labels = dcd.c_ll.getLabels();
-        for (const auto& label: predicted_labels) {
-            cout << "Node: " << label.first << " Community: " << label.second << endl;
-        }
-        dcd.c_ll.draw("predicted_graph.png");
-    } else if (algorithm_number == 2) {
-        BeliefPropagation bp(sbm.sbm_graph, communities, radius, intra_community_edge_probability, inter_community_edge_probability, addedEdges, removedEdges);
-        unordered_map<int, int> predicted_labels = bp.bp_graph.getLabels();
-        for (const auto& label: predicted_labels) {
-            cout << "Node: " << label.first << " Community: " << label.second << endl;
-        }
-        bp.bp_graph.draw("predicted_graph.png");
-    }
+    return generated_sequence{
+        sbm = sbm,
+        algorithm_number = algorithm_number,
+        radius = radius,
+        addedEdges = addedEdges,
+        removedEdges = removedEdges
+    };
 }

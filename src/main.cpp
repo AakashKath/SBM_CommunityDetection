@@ -35,7 +35,31 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    generateSequence(filename);
+    generated_sequence gs = generateSequence(filename);
+
+    if (gs.algorithm_number == 1) {
+        DynamicCommunityDetection dcd(gs.sbm.sbm_graph, gs.sbm.numberCommunities, gs.addedEdges, gs.removedEdges);
+        unordered_map<int, int> predicted_labels = dcd.c_ll.getLabels();
+        for (const auto& label: predicted_labels) {
+            cout << "Node: " << label.first << " Community: " << label.second << endl;
+        }
+        dcd.c_ll.draw("predicted_graph.png");
+    } else if (gs.algorithm_number == 2) {
+        BeliefPropagation bp(
+            gs.sbm.sbm_graph,
+            gs.sbm.numberCommunities,
+            gs.radius,
+            gs.sbm.intraCommunityEdgeProbability,
+            gs.sbm.interCommunityEdgeProbability,
+            gs.addedEdges,
+            gs.removedEdges
+        );
+        unordered_map<int, int> predicted_labels = bp.bp_graph.getLabels();
+        for (const auto& label: predicted_labels) {
+            cout << "Node: " << label.first << " Community: " << label.second << endl;
+        }
+        bp.bp_graph.draw("predicted_graph.png");
+    }
 
     return 0;
 }
