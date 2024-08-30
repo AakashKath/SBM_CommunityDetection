@@ -1,25 +1,44 @@
 #include "gtest/gtest.h"
 #include "utils/sequence_generator.h"
 #include "utils/quality_measures.h"
+#include "dynamic_community_detection.h"
+#include "belief_propagation.h"
+#include <iomanip>
 
-TEST(ModularityCheck, BasicTest) {
-    generated_sequence gs = generateSequence();
+class InitConf : public ::testing::Test {
+    public:
+        static DynamicCommunityDetection* dcd;
+        static BeliefPropagation* bp;
 
-    // Run all the algorithms
-    DynamicCommunityDetection dcd(gs.sbm.sbm_graph, gs.sbm.numberCommunities, gs.addedEdges, gs.removedEdges);
-    BeliefPropagation bp(
-        gs.sbm.sbm_graph,
-        gs.sbm.numberCommunities,
-        gs.radius,
-        gs.sbm.intraCommunityEdgeProbability,
-        gs.sbm.interCommunityEdgeProbability,
-        gs.addedEdges,
-        gs.removedEdges
-    );
+        static void SetUpTestSuite() {
+            generated_sequence gs = generateSequence();
 
+            // Run all the algorithms
+            dcd = new DynamicCommunityDetection(gs.sbm.sbm_graph, gs.sbm.numberCommunities, gs.addedEdges, gs.removedEdges);
+            bp = new BeliefPropagation(
+                gs.sbm.sbm_graph,
+                gs.sbm.numberCommunities,
+                gs.radius,
+                gs.sbm.intraCommunityEdgeProbability,
+                gs.sbm.interCommunityEdgeProbability,
+                gs.addedEdges,
+                gs.removedEdges
+            );
+        }
+
+        static void TearDownTestSuite() {
+            delete dcd;
+            delete bp;
+        }
+};
+
+DynamicCommunityDetection* InitConf::dcd = nullptr;
+BeliefPropagation* InitConf::bp = nullptr;
+
+TEST_F(InitConf, ModularityCheck) {
     unordered_map<string, double> modularity_ranking;
-    modularity_ranking.emplace("DCD", modularity(dcd.c_ll));
-    modularity_ranking.emplace("StreamBP", modularity(bp.bp_graph));
+    modularity_ranking.emplace("DCD", modularity(dcd->c_ll));
+    modularity_ranking.emplace("StreamBP", modularity(bp->bp_graph));
 
     EXPECT_GT(modularity_ranking.size(), 0);
     for (const auto& rank: modularity_ranking) {

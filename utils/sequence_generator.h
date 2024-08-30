@@ -5,8 +5,6 @@
 #include <fstream>
 #include "nlohmann/json.hpp"
 #include "src/sbm.h"
-#include "dynamic_community_detection.h"
-#include "belief_propagation.h"
 
 using namespace std;
 

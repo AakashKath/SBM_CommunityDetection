@@ -1,5 +1,7 @@
 #include <iostream>
 #include "utils/sequence_generator.h"
+#include "dynamic_community_detection.h"
+#include "belief_propagation.h"
 
 using namespace std;
 
