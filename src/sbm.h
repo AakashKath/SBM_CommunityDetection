@@ -12,9 +12,6 @@ using namespace std;
 class Sbm {
     private:
         int numberNodes;
-        int numberCommunities;
-        double intraCommunityEdgeProbability;
-        double interCommunityEdgeProbability;
         double communityBoundaryThreshold;
         vector<vector<int>> communityTracker;
         mt19937 gen;
@@ -29,6 +26,9 @@ class Sbm {
         ~Sbm();
 
         Graph sbm_graph;
+        int numberCommunities;
+        double intraCommunityEdgeProbability;
+        double interCommunityEdgeProbability;
 
         pair<int, int> generateEdge();
 };

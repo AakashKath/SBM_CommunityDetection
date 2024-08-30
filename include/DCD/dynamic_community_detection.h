@@ -2,6 +2,7 @@
 #define DYNAMIC_COMMUNITY_DETECTION_H
 
 #include "src/graph.h"
+#include "utils/quality_measures.h"
 #include <numeric>
 #include <vector>
 #include <unordered_set>
@@ -22,7 +23,6 @@ class DynamicCommunityDetection {
         int communityCount;
 
         void initialPartition(Graph& auxiliary_graph);
-        double modularity(const Graph& auxiliary_graph) const;
         vector<pair<int, int>> oneLevel(Graph& auxiliary_graph);
         void updateCommunities(const vector<pair<int, int>>& changed_nodes);
         void partitionToGraph();
