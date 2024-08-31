@@ -109,3 +109,27 @@ double symmetricDifference(const Graph& graph, unordered_map<int, unordered_set<
 
     return static_cast<double>(result) / graph.nodes.size();
 }
+
+double getCPUUsage() {
+    struct rusage usage;
+    getrusage(RUSAGE_SELF, &usage);
+
+    double user_time_ms = (usage.ru_utime.tv_sec * 1000.0) + (usage.ru_utime.tv_usec / 1000.0);
+    double system_time_ms = (usage.ru_stime.tv_sec * 1000.0) + (usage.ru_stime.tv_usec / 1000.0);
+    return user_time_ms + system_time_ms;
+}
+
+long getRAMUsage() {
+    ifstream status_file("/proc/self/status");
+    string line;
+    long ram_kb = 0;
+
+    while (getline(status_file, line)) {
+        if (line.rfind("VmRSS:", 0) == 0) {
+            ram_kb = stol(line.substr(line.find_last_of("\t") + 1));
+            break;
+        }
+    }
+
+    return ram_kb;
+}

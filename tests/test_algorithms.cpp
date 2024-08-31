@@ -6,7 +6,55 @@
 #include <iomanip>
 #include <chrono>
 
-TEST(RunTime, BasicTest) {
+class SkipTestOnWindows : public ::testing::Test {
+    protected:
+        void SetUp() override {
+            #ifdef _WIN32
+                GTEST_SKIP() << "Test skipped on Windows. Need to implement a windows usage method.";
+            #endif
+        }
+};
+
+TEST_F(SkipTestOnWindows, MemoryUsageTest) {
+    generated_sequence gs = generateSequence();
+
+    vector<tuple<string, double, long>> memory_ranking;
+
+    double dcd_start_cpu = getCPUUsage();
+    long dcd_start_ram = getRAMUsage();
+    DynamicCommunityDetection dcd(gs.sbm.sbm_graph, gs.sbm.numberCommunities, gs.addedEdges, gs.removedEdges);
+    double dcd_end_cpu = getCPUUsage();
+    long dcd_end_ram = getRAMUsage();
+
+    memory_ranking.emplace_back("DCD", dcd_end_cpu - dcd_start_cpu, dcd_end_ram - dcd_start_ram);
+
+    double bp_start_cpu = getCPUUsage();
+    long bp_start_ram = getRAMUsage();
+    BeliefPropagation bp(
+        gs.sbm.sbm_graph,
+        gs.sbm.numberCommunities,
+        gs.radius,
+        gs.sbm.intraCommunityEdgeProbability,
+        gs.sbm.interCommunityEdgeProbability,
+        gs.addedEdges,
+        gs.removedEdges
+    );
+    double bp_end_cpu = getCPUUsage();
+    long bp_end_ram = getRAMUsage();
+
+    memory_ranking.emplace_back("StreamBP", bp_end_cpu - bp_start_cpu, bp_end_ram - bp_start_ram);
+
+    EXPECT_GT(memory_ranking.size(), 0);
+
+    // Print the ranking
+    int index = 1;
+    cout << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << setw(25) << "CPU Usage (in milliseconds)" << "Memory Usage (in KB)" << endl;
+    for (const auto& rank: memory_ranking) {
+        cout << left << setw(6) << index++ << setw(20) << get<0>(rank) << setw(25) << fixed << setprecision(4) << get<1>(rank) << get<2>(rank) << endl;
+    }
+}
+
+TEST(RunTimeTest, BasicTest) {
     generated_sequence gs = generateSequence();
 
     auto dcd_start = chrono::high_resolution_clock::now();
