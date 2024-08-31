@@ -4,6 +4,42 @@
 #include "dynamic_community_detection.h"
 #include "belief_propagation.h"
 #include <iomanip>
+#include <chrono>
+
+TEST(RunTime, BasicTest) {
+    generated_sequence gs = generateSequence();
+
+    auto dcd_start = chrono::high_resolution_clock::now();
+    DynamicCommunityDetection dcd(gs.sbm.sbm_graph, gs.sbm.numberCommunities, gs.addedEdges, gs.removedEdges);
+    auto dcd_end = chrono::high_resolution_clock::now();
+    chrono::duration<double, milli> dcd_duration = dcd_end - dcd_start;
+
+    auto bp_start = chrono::high_resolution_clock::now();
+    BeliefPropagation bp(
+        gs.sbm.sbm_graph,
+        gs.sbm.numberCommunities,
+        gs.radius,
+        gs.sbm.intraCommunityEdgeProbability,
+        gs.sbm.interCommunityEdgeProbability,
+        gs.addedEdges,
+        gs.removedEdges
+    );
+    auto bp_end = chrono::high_resolution_clock::now();
+    chrono::duration<double, milli> bp_duration = bp_end - bp_start;
+
+    unordered_map<string, double> runtime_ranking;
+    runtime_ranking.emplace("DCD", dcd_duration.count());
+    runtime_ranking.emplace("StreamBP", bp_duration.count());
+
+    EXPECT_GT(runtime_ranking.size(), 0);
+
+    // Print the ranking
+    int index = 1;
+    cout << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Runtime (in milliseconds)" << endl;
+    for (const auto& rank: runtime_ranking) {
+        cout << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
+    }
+}
 
 class InitConf : public ::testing::Test {
     public:
