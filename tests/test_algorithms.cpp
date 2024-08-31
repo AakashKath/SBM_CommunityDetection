@@ -93,13 +93,15 @@ class InitConf : public ::testing::Test {
     public:
         static DynamicCommunityDetection* dcd;
         static BeliefPropagation* bp;
-        static unordered_map<int, unordered_set<int>> original_labels;
+        static unordered_map<int, unordered_set<int>> community_to_node_mapping;
+        static unordered_map<int, int> node_community_to_mapping;
 
         static void SetUpTestSuite() {
             generated_sequence gs = generateSequence();
 
             for (const auto& node: gs.sbm.sbm_graph.nodes) {
-                original_labels[node.label].insert(node.id);
+                community_to_node_mapping[node.label].insert(node.id);
+                node_community_to_mapping.emplace(node.id, node.label);
             }
 
             // Run all the algorithms
@@ -123,7 +125,8 @@ class InitConf : public ::testing::Test {
 
 DynamicCommunityDetection* InitConf::dcd = nullptr;
 BeliefPropagation* InitConf::bp = nullptr;
-unordered_map<int, unordered_set<int>> InitConf::original_labels;
+unordered_map<int, unordered_set<int>> InitConf::community_to_node_mapping;
+unordered_map<int, int> InitConf::node_community_to_mapping;
 
 TEST_F(InitConf, ModularityTest) {
     unordered_map<string, double> modularity_ranking;
@@ -145,8 +148,8 @@ TEST_F(InitConf, ModularityTest) {
 
 TEST_F(InitConf, SymmetricDifferenceTest) {
     unordered_map<string, double> symmetric_difference_ranking;
-    symmetric_difference_ranking.emplace("DCD", symmetricDifference(dcd->c_ll, original_labels));
-    symmetric_difference_ranking.emplace("StreamBP", symmetricDifference(bp->bp_graph, original_labels));
+    symmetric_difference_ranking.emplace("DCD", symmetricDifference(dcd->c_ll, community_to_node_mapping));
+    symmetric_difference_ranking.emplace("StreamBP", symmetricDifference(bp->bp_graph, community_to_node_mapping));
 
     EXPECT_GT(symmetric_difference_ranking.size(), 0);
     for (const auto& rank: symmetric_difference_ranking) {
@@ -157,6 +160,24 @@ TEST_F(InitConf, SymmetricDifferenceTest) {
     int index = 1;
     cout << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Symmetric Difference Value" << endl;
     for (const auto& rank: symmetric_difference_ranking) {
+        cout << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
+    }
+}
+
+TEST_F(InitConf, F1ScoreTest) {
+    unordered_map<string, double> f1_score_ranking;
+    f1_score_ranking.emplace("DCD", f1Score(dcd->c_ll, node_community_to_mapping));
+    f1_score_ranking.emplace("StreamBP", f1Score(bp->bp_graph, node_community_to_mapping));
+
+    EXPECT_GT(f1_score_ranking.size(), 0);
+    for (const auto& rank: f1_score_ranking) {
+        EXPECT_TRUE((rank.second >= 0.0) && (rank.second <= 1.0));
+    }
+
+    // Print the ranking
+    int index = 1;
+    cout << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "F1 Score" << endl;
+    for (const auto& rank: f1_score_ranking) {
         cout << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
     }
 }

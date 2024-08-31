@@ -15,5 +15,6 @@ double modularity(const Graph& graph);
 double symmetricDifference(const Graph& graph, unordered_map<int, unordered_set<int>> original_labels);
 double getCPUUsage();
 long getRAMUsage();
+double f1Score(const Graph& graph, unordered_map<int, int> original_labels);
 
 #endif // QUALITY_MEASURES_H

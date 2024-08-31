@@ -133,3 +133,25 @@ long getRAMUsage() {
 
     return ram_kb;
 }
+
+double f1Score(const Graph& graph, unordered_map<int, int> original_labels) {
+    int true_positive = 0;
+    int false_positive = 0;
+    int false_negative = 0;
+
+    for (const auto& node1: graph.nodes) {
+        for (const auto& node2: graph.nodes) {
+            if (node1.label == node2.label && original_labels.at(node1.id) == original_labels.at(node2.id)) {
+                true_positive++;
+            } else if (original_labels.at(node1.id) == original_labels.at(node2.id) && node1.label != node2.label) {
+                false_positive++;
+            } else if (node1.label == node2.label && original_labels.at(node1.id) != original_labels.at(node2.id)) {
+                false_negative++;
+            }
+        }
+    }
+
+    double precision = static_cast<double>(true_positive) / (true_positive + false_positive);
+    double recall = static_cast<double>(true_positive) / (true_positive + false_negative);
+    return 2 * precision * recall / (precision + recall);
+}
