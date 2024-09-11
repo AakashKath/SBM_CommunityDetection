@@ -155,3 +155,17 @@ double f1Score(const Graph& graph, unordered_map<int, int> original_labels) {
     double recall = static_cast<double>(true_positive) / (true_positive + false_negative);
     return 2 * precision * recall / (precision + recall);
 }
+
+double loglikelihood(const Graph& graph, double interCommunityEdgeProbability, double intraCommunityEdgeProbability) {
+    double loglikelihood = 0.0;
+    for (const auto& node1: graph.nodes) {
+        for (const auto& node2: graph.nodes) {
+            if (node1.label == node2.label) {
+                loglikelihood += log(intraCommunityEdgeProbability);
+            } else {
+                loglikelihood += log(interCommunityEdgeProbability);
+            }
+        }
+    }
+    return loglikelihood;
+}

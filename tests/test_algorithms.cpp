@@ -15,6 +15,7 @@ class SkipTestOnWindows : public ::testing::Test {
         }
 };
 
+// CPU and RAM usage by the algorithms. Less the better.
 TEST_F(SkipTestOnWindows, MemoryUsageTest) {
     generated_sequence gs = generateSequence();
 
@@ -54,6 +55,7 @@ TEST_F(SkipTestOnWindows, MemoryUsageTest) {
     }
 }
 
+// Run time of the algorithms. Less the better.
 TEST(RunTimeTest, BasicTest) {
     generated_sequence gs = generateSequence();
 
@@ -95,9 +97,16 @@ class InitConf : public ::testing::Test {
         static BeliefPropagation* bp;
         static unordered_map<int, unordered_set<int>> community_to_node_mapping;
         static unordered_map<int, int> node_community_to_mapping;
+        static double interCommunityEdgeProbability;
+        static double intraCommunityEdgeProbability;
+        static Graph original_graph;
 
         static void SetUpTestSuite() {
             generated_sequence gs = generateSequence();
+
+            intraCommunityEdgeProbability = gs.sbm.intraCommunityEdgeProbability;
+            interCommunityEdgeProbability = gs.sbm.interCommunityEdgeProbability;
+            original_graph = gs.sbm.sbm_graph;
 
             for (const auto& node: gs.sbm.sbm_graph.nodes) {
                 community_to_node_mapping[node.label].insert(node.id);
@@ -127,7 +136,13 @@ DynamicCommunityDetection* InitConf::dcd = nullptr;
 BeliefPropagation* InitConf::bp = nullptr;
 unordered_map<int, unordered_set<int>> InitConf::community_to_node_mapping;
 unordered_map<int, int> InitConf::node_community_to_mapping;
+double InitConf::interCommunityEdgeProbability;
+double InitConf::intraCommunityEdgeProbability;
+Graph InitConf::original_graph = Graph(0);
 
+// Measures the strength of the division of a network into communities by comparing the density of edges inside
+// communities with the density expected if edges were distributed randomly.
+// Higher modularity values indicate better-defined community structures.
 TEST_F(InitConf, ModularityTest) {
     unordered_map<string, double> modularity_ranking;
     modularity_ranking.emplace("DCD", modularity(dcd->c_ll));
@@ -146,6 +161,7 @@ TEST_F(InitConf, ModularityTest) {
     }
 }
 
+// Symmetric difference between original and predicted communities. Less the better.
 TEST_F(InitConf, SymmetricDifferenceTest) {
     unordered_map<string, double> symmetric_difference_ranking;
     symmetric_difference_ranking.emplace("DCD", symmetricDifference(dcd->c_ll, community_to_node_mapping));
@@ -164,6 +180,7 @@ TEST_F(InitConf, SymmetricDifferenceTest) {
     }
 }
 
+// Harmonic mean of precision and recall. Higher values indicate better performance.
 TEST_F(InitConf, F1ScoreTest) {
     unordered_map<string, double> f1_score_ranking;
     f1_score_ranking.emplace("DCD", f1Score(dcd->c_ll, node_community_to_mapping));
@@ -178,6 +195,28 @@ TEST_F(InitConf, F1ScoreTest) {
     int index = 1;
     cout << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "F1 Score" << endl;
     for (const auto& rank: f1_score_ranking) {
+        cout << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
+    }
+}
+
+// How close is the predicted graph to the original graph. Higher log-likelihood distance indicates more closer to the original graph.
+TEST_F(InitConf, LogLikelihoodTest) {
+    unordered_map<string, double> log_likelihood_ranking;
+    double original_ll = loglikelihood(original_graph, interCommunityEdgeProbability, intraCommunityEdgeProbability);
+    double dcd_ll = loglikelihood(dcd->c_ll, interCommunityEdgeProbability, intraCommunityEdgeProbability);
+    double bp_ll = loglikelihood(bp->bp_graph, interCommunityEdgeProbability, intraCommunityEdgeProbability);
+    log_likelihood_ranking.emplace("DCD", fabs((original_ll - dcd_ll) / original_ll));
+    log_likelihood_ranking.emplace("StreamBP", fabs((original_ll - bp_ll) / original_ll));
+
+    EXPECT_GT(log_likelihood_ranking.size(), 0);
+    for (const auto& rank: log_likelihood_ranking) {
+        EXPECT_TRUE((rank.second >= 0.0) && (rank.second <= 1.0));
+    }
+
+    // Print the ranking
+    int index = 1;
+    cout << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Log-likelihood Distance" << endl;
+    for (const auto& rank: log_likelihood_ranking) {
         cout << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
     }
 }
