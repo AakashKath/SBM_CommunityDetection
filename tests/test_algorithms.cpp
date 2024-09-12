@@ -220,3 +220,21 @@ TEST_F(InitConf, LogLikelihoodTest) {
         cout << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
     }
 }
+
+// #edges_within_community / #total_edges. Higher embeddedness means nodes are well-integrated.
+// TODO: Can be compared with the original graph
+TEST_F(InitConf, EmbeddednessTest) {
+    unordered_map<string, double> embeddedness_ranking;
+    double original_e = embeddedness(original_graph);
+    embeddedness_ranking.emplace("DCD", embeddedness(dcd->c_ll));
+    embeddedness_ranking.emplace("StreamBP", embeddedness(bp->bp_graph));
+
+    EXPECT_GT(embeddedness_ranking.size(), 0);
+
+    // Print the ranking
+    int index = 1;
+    cout << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Embeddedness Distance" << endl;
+    for (const auto& rank: embeddedness_ranking) {
+        cout << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
+    }
+}

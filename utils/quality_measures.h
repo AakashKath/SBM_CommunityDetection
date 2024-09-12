@@ -18,5 +18,6 @@ double getCPUUsage();
 long getRAMUsage();
 double f1Score(const Graph& graph, unordered_map<int, int> original_labels);
 double loglikelihood(const Graph& graph, double interCommunityEdgeProbability, double intraCommunityEdgeProbability);
+double embeddedness(const Graph& graph);
 
 #endif // QUALITY_MEASURES_H

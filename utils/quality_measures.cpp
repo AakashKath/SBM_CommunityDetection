@@ -169,3 +169,21 @@ double loglikelihood(const Graph& graph, double interCommunityEdgeProbability, d
     }
     return loglikelihood;
 }
+
+double embeddedness(const Graph& graph) {
+    int withinCommunityNodes;
+    double total_embeddedness = 0.0;
+    for (const auto& node: graph.nodes) {
+        withinCommunityNodes = 0;
+        for (const auto& edge: node.edgeList) {
+            const Node& neighbor = graph.getNode(get<1>(edge));
+            if (node.label == neighbor.label) {
+                withinCommunityNodes++;
+            }
+        }
+        if (node.edgeList.size() > 0) {
+            total_embeddedness += static_cast<double>(withinCommunityNodes) / node.edgeList.size();
+        }
+    }
+    return total_embeddedness;
+}
