@@ -17,7 +17,8 @@ double symmetricDifference(const Graph& graph, unordered_map<int, unordered_set<
 double getCPUUsage();
 long getRAMUsage();
 double f1Score(const Graph& graph, unordered_map<int, int> original_labels);
-double loglikelihood(const Graph& graph, double interCommunityEdgeProbability, double intraCommunityEdgeProbability);
+// edgeGraph used for original graph as we dont keep edge information on this graph
+double loglikelihood(const Graph& graph, const Graph& edgeGraph);
 double embeddedness(const Graph& graph);
 
 #endif // QUALITY_MEASURES_H

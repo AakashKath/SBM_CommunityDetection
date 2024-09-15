@@ -158,6 +158,9 @@ double f1Score(const Graph& graph, unordered_map<int, int> original_labels) {
 
     for (const auto& node1: graph.nodes) {
         for (const auto& node2: graph.nodes) {
+            if (node1.id == node2.id) {
+                continue;
+            }
             if (node1.label == node2.label && original_labels.at(node1.id) == original_labels.at(node2.id)) {
                 true_positive++;
             } else if (original_labels.at(node1.id) == original_labels.at(node2.id) && node1.label != node2.label) {
@@ -173,17 +176,57 @@ double f1Score(const Graph& graph, unordered_map<int, int> original_labels) {
     return 2 * precision * recall / (precision + recall);
 }
 
-double loglikelihood(const Graph& graph, double interCommunityEdgeProbability, double intraCommunityEdgeProbability) {
+double loglikelihood(const Graph& graph, const Graph& edgeGraph) {
     double loglikelihood = 0.0;
-    for (const auto& node1: graph.nodes) {
-        for (const auto& node2: graph.nodes) {
-            if (node1.label == node2.label) {
-                loglikelihood += log(intraCommunityEdgeProbability);
+    int intraCommunityEdges = 0;
+    int interCommunityEdges = 0;
+    int intraCommunityPair = 0;
+    int interCommunityPair = 0;
+    for (const auto& edgeNode: edgeGraph.nodes) {
+        const Node& node = graph.getNode(edgeNode.id);
+        for (const auto& edge: edgeNode.edgeList) {
+            const Node& neighbor = graph.getNode(get<1>(edge));
+            if (node.label == neighbor.label) {
+                intraCommunityEdges++;
             } else {
-                loglikelihood += log(interCommunityEdgeProbability);
+                interCommunityEdges++;
             }
         }
     }
+    intraCommunityEdges /= 2;
+    interCommunityEdges /= 2;
+
+    for (const Node& node1: graph.nodes) {
+        for (const Node& node2: graph.nodes) {
+            if (node1.id == node2.id) {
+                continue;
+            }
+            if (node1.label == node2.label) {
+                intraCommunityPair++;
+            } else {
+                interCommunityPair++;
+            }
+        }
+    }
+    intraCommunityPair /= 2;
+    interCommunityPair /= 2;
+
+    double estimatedIntraCommunityEdgeProbability = 0.0;
+    double estimatedInterCommunityEdgeProbability = 0.0;
+    if (intraCommunityPair > 0) {
+        estimatedIntraCommunityEdgeProbability = (double)intraCommunityEdges / intraCommunityPair;
+    }
+    if (interCommunityPair > 0) {
+        estimatedInterCommunityEdgeProbability = (double)interCommunityEdges / interCommunityPair;
+    }
+
+    if (estimatedIntraCommunityEdgeProbability != 0) {
+        loglikelihood += intraCommunityEdges * log(estimatedIntraCommunityEdgeProbability) + (intraCommunityPair - intraCommunityEdges) * log(1.0 - estimatedIntraCommunityEdgeProbability);
+    }
+    if (estimatedInterCommunityEdgeProbability != 0) {
+        loglikelihood += interCommunityEdges * log(estimatedInterCommunityEdgeProbability) + (interCommunityPair - interCommunityEdges) * log(1.0 - estimatedInterCommunityEdgeProbability);
+    }
+
     return loglikelihood;
 }
 

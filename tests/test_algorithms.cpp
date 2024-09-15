@@ -202,9 +202,10 @@ TEST_F(InitConf, F1ScoreTest) {
 // How close is the predicted graph to the original graph. Higher log-likelihood distance indicates more closer to the original graph.
 TEST_F(InitConf, LogLikelihoodTest) {
     unordered_map<string, double> log_likelihood_ranking;
-    double original_ll = loglikelihood(original_graph, interCommunityEdgeProbability, intraCommunityEdgeProbability);
-    double dcd_ll = loglikelihood(dcd->c_ll, interCommunityEdgeProbability, intraCommunityEdgeProbability);
-    double bp_ll = loglikelihood(bp->bp_graph, interCommunityEdgeProbability, intraCommunityEdgeProbability);
+    // Using bp_graph for original log likelihood as it doesn't make changes to the edge information
+    double original_ll = loglikelihood(original_graph, bp->bp_graph);
+    double dcd_ll = loglikelihood(dcd->c_ll, dcd->c_ll);
+    double bp_ll = loglikelihood(bp->bp_graph, bp->bp_graph);
     log_likelihood_ranking.emplace("DCD", fabs((original_ll - dcd_ll) / original_ll));
     log_likelihood_ranking.emplace("StreamBP", fabs((original_ll - bp_ll) / original_ll));
 
