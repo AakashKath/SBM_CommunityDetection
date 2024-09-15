@@ -139,14 +139,31 @@ double f1Score(const Graph& graph, unordered_map<int, int> original_labels) {
     int false_positive = 0;
     int false_negative = 0;
 
+    /*
+    We can have two kinds of edge, inter- and intra-community edges. Label assignment can be defined as follows
+        1 = intra-community edge
+        0 = inter-community edge
+    For confusion matrix we define (Ground-truth label, Predicted label):
+        True Positives: The number of edges correctly predicted as intra-community. (1, 1)
+        True Negatives: The number of edges corerctly predicted as inter-community. (0, 0)
+        False Positives: The number of edges incorrectly predicted as intra-community. (0, 1)
+        False Negatives: The number of edges incorrectly predicted as inter-community. (1, 0)
+    We define:
+        Precision: The proportion of correctly predicted intra-community edges out of all edges predicted as
+            intra-community.
+        Recall (sensitivity): The proportion of correctly predicted intra-community edges out of all actual
+            intra-community edges.
+        F1Score: Harmonic mean of precision and recall.
+    */
+
     for (const auto& node1: graph.nodes) {
         for (const auto& node2: graph.nodes) {
             if (node1.label == node2.label && original_labels.at(node1.id) == original_labels.at(node2.id)) {
                 true_positive++;
             } else if (original_labels.at(node1.id) == original_labels.at(node2.id) && node1.label != node2.label) {
-                false_positive++;
-            } else if (node1.label == node2.label && original_labels.at(node1.id) != original_labels.at(node2.id)) {
                 false_negative++;
+            } else if (node1.label == node2.label && original_labels.at(node1.id) != original_labels.at(node2.id)) {
+                false_positive++;
             }
         }
     }
