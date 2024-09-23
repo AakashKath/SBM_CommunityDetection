@@ -15,106 +15,42 @@ class SkipTestOnWindows : public ::testing::Test {
         }
 };
 
-// CPU and RAM usage by the algorithms. Less the better.
-TEST_F(SkipTestOnWindows, MemoryUsageTest) {
-    generated_sequence gs = generateSequence();
-
-    vector<tuple<string, double, long>> memory_ranking;
-
-    double dcd_start_cpu = getCPUUsage();
-    long dcd_start_ram = getRAMUsage();
-    DynamicCommunityDetection dcd(gs.sbm.sbm_graph, gs.sbm.numberCommunities, gs.addedEdges, gs.removedEdges);
-    double dcd_end_cpu = getCPUUsage();
-    long dcd_end_ram = getRAMUsage();
-
-    memory_ranking.emplace_back("DCD", dcd_end_cpu - dcd_start_cpu, dcd_end_ram - dcd_start_ram);
-
-    double bp_start_cpu = getCPUUsage();
-    long bp_start_ram = getRAMUsage();
-    BeliefPropagation bp(
-        gs.sbm.sbm_graph,
-        gs.sbm.numberCommunities,
-        gs.radius,
-        gs.sbm.intraCommunityEdgeProbability,
-        gs.sbm.interCommunityEdgeProbability,
-        gs.addedEdges,
-        gs.removedEdges
-    );
-    double bp_end_cpu = getCPUUsage();
-    long bp_end_ram = getRAMUsage();
-
-    memory_ranking.emplace_back("StreamBP", bp_end_cpu - bp_start_cpu, bp_end_ram - bp_start_ram);
-
-    EXPECT_GT(memory_ranking.size(), 0);
-
-    // Print the ranking
-    int index = 1;
-    cout << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << setw(25) << "CPU Usage (in milliseconds)" << "Memory Usage (in KB)" << endl;
-    for (const auto& rank: memory_ranking) {
-        cout << left << setw(6) << index++ << setw(20) << get<0>(rank) << setw(25) << fixed << setprecision(4) << get<1>(rank) << get<2>(rank) << endl;
-    }
-}
-
-// Run time of the algorithms. Less the better.
-TEST(RunTimeTest, BasicTest) {
-    generated_sequence gs = generateSequence();
-
-    auto dcd_start = chrono::high_resolution_clock::now();
-    DynamicCommunityDetection dcd(gs.sbm.sbm_graph, gs.sbm.numberCommunities, gs.addedEdges, gs.removedEdges);
-    auto dcd_end = chrono::high_resolution_clock::now();
-    chrono::duration<double, milli> dcd_duration = dcd_end - dcd_start;
-
-    auto bp_start = chrono::high_resolution_clock::now();
-    BeliefPropagation bp(
-        gs.sbm.sbm_graph,
-        gs.sbm.numberCommunities,
-        gs.radius,
-        gs.sbm.intraCommunityEdgeProbability,
-        gs.sbm.interCommunityEdgeProbability,
-        gs.addedEdges,
-        gs.removedEdges
-    );
-    auto bp_end = chrono::high_resolution_clock::now();
-    chrono::duration<double, milli> bp_duration = bp_end - bp_start;
-
-    unordered_map<string, double> runtime_ranking;
-    runtime_ranking.emplace("DCD", dcd_duration.count());
-    runtime_ranking.emplace("StreamBP", bp_duration.count());
-
-    EXPECT_GT(runtime_ranking.size(), 0);
-
-    // Print the ranking
-    int index = 1;
-    cout << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Runtime (in milliseconds)" << endl;
-    for (const auto& rank: runtime_ranking) {
-        cout << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
-    }
-}
-
 class InitConf : public ::testing::Test {
     public:
+        static ofstream outfile;
         static DynamicCommunityDetection* dcd;
         static BeliefPropagation* bp;
         static unordered_map<int, unordered_set<int>> community_to_node_mapping;
-        static unordered_map<int, int> node_community_to_mapping;
+        static unordered_map<int, int> node_to_community_mapping;
         static double interCommunityEdgeProbability;
         static double intraCommunityEdgeProbability;
         static Graph original_graph;
 
         static void SetUpTestSuite() {
+            vector<tuple<string, double, long>> memory_ranking;
             generated_sequence gs = generateSequence();
 
             intraCommunityEdgeProbability = gs.sbm.intraCommunityEdgeProbability;
             interCommunityEdgeProbability = gs.sbm.interCommunityEdgeProbability;
             original_graph = gs.sbm.sbm_graph;
 
-            for (const auto& node: gs.sbm.sbm_graph.nodes) {
-                community_to_node_mapping[node.label].insert(node.id);
-                node_community_to_mapping.emplace(node.id, node.label);
-            }
+            node_to_community_mapping = gs.sbm.sbm_graph.getLabels();
+            community_to_node_mapping = gs.sbm.sbm_graph.getCommunities();
 
             // Run all the algorithms
+            double dcd_start_cpu = getCPUUsage();
+            long dcd_start_ram = getRAMUsage();
+            auto dcd_start = chrono::high_resolution_clock::now();
             dcd = new DynamicCommunityDetection(gs.sbm.sbm_graph, gs.sbm.numberCommunities, gs.addedEdges, gs.removedEdges);
+            auto dcd_end = chrono::high_resolution_clock::now();
+            double dcd_end_cpu = getCPUUsage();
+            long dcd_end_ram = getRAMUsage();
+            memory_ranking.emplace_back("DCD", dcd_end_cpu - dcd_start_cpu, dcd_end_ram - dcd_start_ram);
+            chrono::duration<double, milli> dcd_duration = dcd_end - dcd_start;
+
+            double bp_start_cpu = getCPUUsage();
+            long bp_start_ram = getRAMUsage();
+            auto bp_start = chrono::high_resolution_clock::now();
             bp = new BeliefPropagation(
                 gs.sbm.sbm_graph,
                 gs.sbm.numberCommunities,
@@ -124,18 +60,98 @@ class InitConf : public ::testing::Test {
                 gs.addedEdges,
                 gs.removedEdges
             );
+            auto bp_end = chrono::high_resolution_clock::now();
+            double bp_end_cpu = getCPUUsage();
+            long bp_end_ram = getRAMUsage();
+            memory_ranking.emplace_back("StreamBP", bp_end_cpu - bp_start_cpu, bp_end_ram - bp_start_ram);
+            chrono::duration<double, milli> bp_duration = bp_end - bp_start;
+
+            // Draw predicted graphs
+            bp->bp_graph.draw(gs.resultDirectory + string("/bp_graph.png"));
+            dcd->c_ll.draw(gs.resultDirectory + string("/dcd.png"));
+
+            outfile.open(TEST_OUTPUT_DIRECTORY + gs.resultDirectory + string("/results.txt"));
+
+            // Print graph details
+            outfile << "Number of Nodes: " << gs.sbm.sbm_graph.nodes.size() << endl
+                    << "Number of edges: " << gs.addedEdges.size() << endl
+                    << "Number of communities: " << gs.sbm.numberCommunities << endl
+                    << "Radius: " << gs.radius << endl
+                    << "Inter-community edge probability: " << gs.sbm.interCommunityEdgeProbability << endl
+                    << "Intra-community edge probability: " << gs.sbm.intraCommunityEdgeProbability << endl;
+
+            // Print Original and expected communities
+            outfile << endl << "Original Communities:" << endl;
+            for (const auto& community_cluster: community_to_node_mapping) {
+                for (const Node& node: community_cluster.second) {
+                    outfile << node.id << " ";
+                }
+                outfile << endl;
+            }
+            outfile << "StreamBP Communities:" << endl;
+            for (const auto& community_cluster: bp->bp_graph.getCommunities()) {
+                for (const Node& node: community_cluster.second) {
+                    outfile << node.id << " ";
+                }
+                outfile << endl;
+            }
+            outfile << "DCD Communities:" << endl;
+            for (const auto& community_cluster: dcd->c_ll.getCommunities()) {
+                for (const Node& node: community_cluster.second) {
+                    outfile << node.id << " ";
+                }
+                outfile << endl;
+            }
+
+            // Print edges
+            outfile << endl << "Edge details:" << endl;
+            outfile << left << setw(10) << "Src" << " : " << setw(10) << "Dest" << endl;
+            for (const auto& [src, dest] : gs.addedEdges) {
+                outfile << left << setw(10) << src << " : " << setw(10) << dest << endl;
+            }
+
+            // Print the ranking
+            int index = 1;
+            outfile << left << setw(6) << "Rank"
+                    << setw(20) << "Algorithm Name"
+                    << setw(30) << "CPU Usage (in milliseconds)"
+                    << setw(20) << "Memory Usage (in KB)" << endl;
+            for (const auto& rank: memory_ranking) {
+                outfile << left << setw(6) << index++
+                        << setw(20) << get<0>(rank)
+                        << setw(30) << fixed << setprecision(4) << get<1>(rank)
+                        << setw(20) << get<2>(rank) << endl;
+            }
+
+            unordered_map<string, double> runtime_ranking;
+            runtime_ranking.emplace("DCD", dcd_duration.count());
+            runtime_ranking.emplace("StreamBP", bp_duration.count());
+
+            // Print the ranking
+            index = 1;
+            outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Runtime (in milliseconds)" << endl;
+            for (const auto& rank: runtime_ranking) {
+                outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
+            }
+            outfile << endl;
         }
 
         static void TearDownTestSuite() {
             delete dcd;
             delete bp;
+
+            // Close the file after all tests have completed
+            if (outfile.is_open()) {
+                outfile.close();
+            }
         }
 };
 
+ofstream InitConf::outfile;
 DynamicCommunityDetection* InitConf::dcd = nullptr;
 BeliefPropagation* InitConf::bp = nullptr;
 unordered_map<int, unordered_set<int>> InitConf::community_to_node_mapping;
-unordered_map<int, int> InitConf::node_community_to_mapping;
+unordered_map<int, int> InitConf::node_to_community_mapping;
 double InitConf::interCommunityEdgeProbability;
 double InitConf::intraCommunityEdgeProbability;
 Graph InitConf::original_graph = Graph(0);
@@ -155,9 +171,9 @@ TEST_F(InitConf, ModularityTest) {
 
     // Print the ranking
     int index = 1;
-    cout << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Modularity Value" << endl;
+    outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Modularity Value" << endl;
     for (const auto& rank: modularity_ranking) {
-        cout << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
+        outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
     }
 }
 
@@ -174,17 +190,17 @@ TEST_F(InitConf, SymmetricDifferenceTest) {
 
     // Print the ranking
     int index = 1;
-    cout << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Symmetric Difference Value" << endl;
+    outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Symmetric Difference Value" << endl;
     for (const auto& rank: symmetric_difference_ranking) {
-        cout << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
+        outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
     }
 }
 
 // Harmonic mean of precision and recall. Higher values indicate better performance.
 TEST_F(InitConf, F1ScoreTest) {
     unordered_map<string, double> f1_score_ranking;
-    f1_score_ranking.emplace("DCD", f1Score(dcd->c_ll, node_community_to_mapping));
-    f1_score_ranking.emplace("StreamBP", f1Score(bp->bp_graph, node_community_to_mapping));
+    f1_score_ranking.emplace("DCD", f1Score(dcd->c_ll, node_to_community_mapping));
+    f1_score_ranking.emplace("StreamBP", f1Score(bp->bp_graph, node_to_community_mapping));
 
     EXPECT_GT(f1_score_ranking.size(), 0);
     for (const auto& rank: f1_score_ranking) {
@@ -193,9 +209,9 @@ TEST_F(InitConf, F1ScoreTest) {
 
     // Print the ranking
     int index = 1;
-    cout << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "F1 Score" << endl;
+    outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "F1 Score" << endl;
     for (const auto& rank: f1_score_ranking) {
-        cout << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
+        outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
     }
 }
 
@@ -216,9 +232,9 @@ TEST_F(InitConf, LogLikelihoodTest) {
 
     // Print the ranking
     int index = 1;
-    cout << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Log-likelihood Distance" << endl;
+    outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Log-likelihood Distance" << endl;
     for (const auto& rank: log_likelihood_ranking) {
-        cout << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
+        outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
     }
 }
 

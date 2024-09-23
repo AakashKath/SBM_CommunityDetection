@@ -6,6 +6,7 @@
 #include <vector>
 #include <algorithm>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace std;
 
@@ -45,6 +46,7 @@ class Graph {
         const Node& getNode(int nodeId) const;
         Node& getNode(int nodeId);
         unordered_map<int, int> getLabels();
+        unordered_map<int, unordered_set<int>> getCommunities();
 };
 
 #endif // GRAPH_H

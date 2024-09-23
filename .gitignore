@@ -36,3 +36,12 @@ build/
 
 # vscode settings
 .vscode/
+
+# Ignore results except example results
+test_results/
+!test_results/original_graph.png
+!test_results/predicted_graph.png
+
+# Ignore user configs except default
+# config/
+# !config/default.json

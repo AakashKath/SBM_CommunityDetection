@@ -9,12 +9,12 @@ generated_sequence generateSequence(string filename) {
     bool uneven_node_distribution;
 
     // TODO: Absolute path is used for testing purposes, as relative path doesn't work with vscode debugger
-    string fullPath = "/media/kath/New Volume/Study/TUM/Programmes/Thesis/SBM_CommunityDetection/" + filename;
+    string configPath = CONFIG_DIRECTORY + filename;
 
     // Read json file for graph configurations
-    ifstream input_file(fullPath);
+    ifstream input_file(configPath);
     if (!input_file.is_open()) {
-        cerr << "Could not open file " << fullPath << "." << endl;
+        cerr << "Could not open file " << configPath << "." << endl;
         exit(EXIT_FAILURE);
     }
 
@@ -82,8 +82,14 @@ generated_sequence generateSequence(string filename) {
         throw runtime_error("Nodes cannot be equally divided in given number of communities");
     }
 
+    // Create directory for results
+    string resultDirectory = to_string(nodes) + string("_") + to_string(edges) + string("_") + to_string(communities)
+                            + string("_") + to_string(radius) + string("_") + to_string(int(inter_community_edge_probability * 100))
+                            + string("_") + to_string(int(intra_community_edge_probability * 100));
+    filesystem::create_directories(TEST_OUTPUT_DIRECTORY + resultDirectory);
+
     Sbm sbm(nodes, communities, intra_community_edge_probability, inter_community_edge_probability);
-    sbm.sbm_graph.draw("original_graph.png");
+    sbm.sbm_graph.draw(resultDirectory + string("/original_graph.png"));
 
     vector<pair<int, int>> addedEdges{};
     for (int i = 0; i < edges; ++i) {
@@ -98,6 +104,7 @@ generated_sequence generateSequence(string filename) {
         algorithm_number = algorithm_number,
         radius = radius,
         addedEdges = addedEdges,
-        removedEdges = removedEdges
+        removedEdges = removedEdges,
+        resultDirectory = resultDirectory
     };
 }

@@ -20,7 +20,8 @@
                 "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/bin/",
                 "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/lib/",
                 "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/lib/",
-                "TEST_OUTPUT_DIRECTORY": "${sourceDir}/test_results/"
+                "TEST_OUTPUT_DIRECTORY": "${sourceDir}/test_results/",
+                "CONFIG_DIRECTORY": "${sourceDir}/config/"
             }
         }
     ],

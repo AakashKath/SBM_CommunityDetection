@@ -46,6 +46,7 @@ endforeach()
 
 # Define a preprocessor definition with the PNG output directory
 add_compile_definitions(TEST_OUTPUT_DIRECTORY="${TEST_OUTPUT_DIRECTORY}")
+add_compile_definitions(CONFIG_DIRECTORY="${CONFIG_DIRECTORY}")
 
 # Collect all source files in the src and lib directories
 file(GLOB SRC_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)

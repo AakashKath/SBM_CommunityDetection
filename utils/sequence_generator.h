@@ -5,6 +5,7 @@
 #include <fstream>
 #include "nlohmann/json.hpp"
 #include "src/sbm.h"
+#include <filesystem>
 
 using namespace std;
 
@@ -14,6 +15,7 @@ struct generated_sequence {
     int radius;
     vector<pair<int, int>> addedEdges;
     vector<pair<int, int>> removedEdges;
+    string resultDirectory;
 };
 
 generated_sequence generateSequence(string filename = "default.json");

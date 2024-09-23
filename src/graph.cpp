@@ -238,3 +238,11 @@ unordered_map<int, int> Graph::getLabels() {
 
     return predicted_labels;
 }
+
+unordered_map<int, unordered_set<int>> Graph::getCommunities() {
+    unordered_map<int, unordered_set<int>> community_clusters{};
+    for (const auto& node: nodes) {
+        community_clusters[node.label].insert(node.id);
+    }
+    return community_clusters;
+}
