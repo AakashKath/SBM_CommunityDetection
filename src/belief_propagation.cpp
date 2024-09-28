@@ -25,7 +25,7 @@ BeliefPropagation::BeliefPropagation(Graph graph, int communityCount, int impact
 
     // Add edge and update corresponding message vector
     for (const auto& [node1Id, node2Id]: addedEdges) {
-        bp_graph.addUndirectedEdge(node1Id, node2Id);
+        bp_graph.addUndirectedEdge(node1Id, node2Id, 1, true);
         processVertex(node1Id, node2Id);
         processVertex(node2Id, node1Id);
     }

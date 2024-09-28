@@ -150,9 +150,9 @@ double f1Score(const Graph& graph, unordered_map<int, int> original_labels) {
         False Negatives: The number of edges incorrectly predicted as inter-community. (1, 0)
     We define:
         Precision: The proportion of correctly predicted intra-community edges out of all edges predicted as
-            intra-community.
+            intra-community. TP/(TP+FP)
         Recall (sensitivity): The proportion of correctly predicted intra-community edges out of all actual
-            intra-community edges.
+            intra-community edges. TP/(TP+FN)
         F1Score: Harmonic mean of precision and recall.
     */
 
