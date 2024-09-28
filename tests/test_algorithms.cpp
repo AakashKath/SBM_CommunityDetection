@@ -28,6 +28,10 @@ class InitConf : public ::testing::Test {
 
         static void SetUpTestSuite() {
             vector<tuple<string, double, long>> memory_ranking;
+            size_t start_idle_time = 0;
+            size_t start_total_time = 0;
+            size_t end_idle_time = 0;
+            size_t end_total_time = 0;
             generated_sequence gs = generateSequence();
 
             intraCommunityEdgeProbability = gs.sbm.intraCommunityEdgeProbability;
@@ -38,17 +42,24 @@ class InitConf : public ::testing::Test {
             community_to_node_mapping = gs.sbm.sbm_graph.getCommunities();
 
             // Run all the algorithms
-            double dcd_start_cpu = getCPUUsage();
+            if (!get_cpu_times(start_idle_time, start_total_time)) {
+                cerr << "Failed to get CPU times at start." << endl;
+            }
             long dcd_start_ram = getRAMUsage();
             auto dcd_start = chrono::high_resolution_clock::now();
             dcd = new DynamicCommunityDetection(gs.sbm.sbm_graph, gs.sbm.numberCommunities, gs.addedEdges, gs.removedEdges);
             auto dcd_end = chrono::high_resolution_clock::now();
-            double dcd_end_cpu = getCPUUsage();
             long dcd_end_ram = getRAMUsage();
-            memory_ranking.emplace_back("DCD", dcd_end_cpu - dcd_start_cpu, dcd_end_ram - dcd_start_ram);
+            if (!get_cpu_times(end_idle_time, end_total_time)) {
+                cerr << "Failed to get CPU times at end." << endl;
+            }
+            double dcd_cpu_usage = 100.0 * (1.0 - (end_idle_time - start_idle_time) / (end_total_time - start_total_time));
+            memory_ranking.emplace_back("DCD", dcd_cpu_usage, dcd_end_ram - dcd_start_ram);
             chrono::duration<double, milli> dcd_duration = dcd_end - dcd_start;
 
-            double bp_start_cpu = getCPUUsage();
+            if (!get_cpu_times(start_idle_time, start_total_time)) {
+                cerr << "Failed to get CPU times at start." << endl;
+            }
             long bp_start_ram = getRAMUsage();
             auto bp_start = chrono::high_resolution_clock::now();
             bp = new BeliefPropagation(
@@ -61,9 +72,12 @@ class InitConf : public ::testing::Test {
                 gs.removedEdges
             );
             auto bp_end = chrono::high_resolution_clock::now();
-            double bp_end_cpu = getCPUUsage();
             long bp_end_ram = getRAMUsage();
-            memory_ranking.emplace_back("StreamBP", bp_end_cpu - bp_start_cpu, bp_end_ram - bp_start_ram);
+            if (!get_cpu_times(end_idle_time, end_total_time)) {
+                cerr << "Failed to get CPU times at end." << endl;
+            }
+            double bp_cpu_usage = 100.0 * (1.0 - (end_idle_time - start_idle_time) / (end_total_time - start_total_time));
+            memory_ranking.emplace_back("StreamBP", bp_cpu_usage, bp_end_ram - bp_start_ram);
             chrono::duration<double, milli> bp_duration = bp_end - bp_start;
 
             // Draw predicted graphs

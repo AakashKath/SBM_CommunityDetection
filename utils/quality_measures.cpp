@@ -110,13 +110,21 @@ double symmetricDifference(const Graph& graph, unordered_map<int, unordered_set<
     return static_cast<double>(result) / graph.nodes.size();
 }
 
-double getCPUUsage() {
-    struct rusage usage;
-    getrusage(RUSAGE_SELF, &usage);
+vector<size_t> get_cpu_times() {
+    ifstream proc_stat("/proc/stat");
+    proc_stat.ignore(5, ' '); // Skip the 'cpu' prefix.
+    vector<size_t> times;
+    for (size_t time; proc_stat >> time; times.push_back(time));
+    return times;
+}
 
-    double user_time_ms = (usage.ru_utime.tv_sec * 1000.0) + (usage.ru_utime.tv_usec / 1000.0);
-    double system_time_ms = (usage.ru_stime.tv_sec * 1000.0) + (usage.ru_stime.tv_usec / 1000.0);
-    return user_time_ms + system_time_ms;
+bool get_cpu_times(size_t &idle_time, size_t &total_time) {
+    const vector<size_t> cpu_times = get_cpu_times();
+    if (cpu_times.size() < 4)
+        return false;
+    idle_time = cpu_times[3];
+    total_time = accumulate(cpu_times.begin(), cpu_times.end(), 0);
+    return true;
 }
 
 long getRAMUsage() {
