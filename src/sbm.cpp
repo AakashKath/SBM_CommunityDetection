@@ -19,7 +19,7 @@ Sbm::Sbm(int numberNodes, int numberCommunities, double intraCommunityEdgeProbab
     double chooseNodesFromSameCommunity = numberCommunities * (1.0 / ((numberNodes / numberCommunities + 1) * betal(numberNodes / numberCommunities - 1, 3)));
     double intraCommunityWeight = chooseNodesFromSameCommunity * intraCommunityEdgeProbability;
     double interCommunityWeight = (1.0 / ((numberNodes + 1) * betal(numberNodes - 1, 3)) - chooseNodesFromSameCommunity) * interCommunityEdgeProbability;
-    double communityBoundaryThreshold = intraCommunityWeight / (interCommunityWeight + intraCommunityWeight);
+    communityBoundaryThreshold = intraCommunityWeight / (interCommunityWeight + intraCommunityWeight);
 }
 
 Sbm::~Sbm() {
