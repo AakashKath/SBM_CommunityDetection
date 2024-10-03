@@ -25,6 +25,10 @@ BeliefPropagation::BeliefPropagation(Graph graph, int communityCount, int impact
 
     // Add edge and update corresponding message vector
     for (const auto& [node1Id, node2Id]: addedEdges) {
+        // Skip self edges
+        if (node1Id == node2Id) {
+            continue;
+        }
         bp_graph.addUndirectedEdge(node1Id, node2Id, 1, true);
         processVertex(node1Id, node2Id);
         processVertex(node2Id, node1Id);
@@ -32,6 +36,10 @@ BeliefPropagation::BeliefPropagation(Graph graph, int communityCount, int impact
 
     // Remove edge and update corresponding message vector
     for (const auto& [node1Id, node2Id]: removedEdges) {
+        // Skip self edges
+        if (node1Id == node2Id) {
+            continue;
+        }
         bp_graph.removeUndirectedEdge(node1Id, node2Id);
         processVertex(node1Id, node2Id);
         processVertex(node2Id, node1Id);
