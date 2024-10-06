@@ -25,6 +25,7 @@ class InitConf : public ::testing::Test {
         static double interCommunityEdgeProbability;
         static double intraCommunityEdgeProbability;
         static Graph original_graph;
+        static int numberCommunities;
 
         static void SetUpTestSuite() {
             vector<tuple<string, double, long>> memory_ranking;
@@ -36,6 +37,7 @@ class InitConf : public ::testing::Test {
 
             intraCommunityEdgeProbability = gs.sbm.intraCommunityEdgeProbability;
             interCommunityEdgeProbability = gs.sbm.interCommunityEdgeProbability;
+            numberCommunities = gs.sbm.numberCommunities;
             original_graph = gs.sbm.sbm_graph;
 
             node_to_community_mapping = gs.sbm.sbm_graph.getLabels();
@@ -169,6 +171,7 @@ unordered_map<int, int> InitConf::node_to_community_mapping;
 double InitConf::interCommunityEdgeProbability;
 double InitConf::intraCommunityEdgeProbability;
 Graph InitConf::original_graph = Graph(0);
+int InitConf::numberCommunities;
 
 // Measures the strength of the division of a network into communities by comparing the density of edges inside
 // communities with the density expected if edges were distributed randomly.
@@ -267,5 +270,23 @@ TEST_F(InitConf, EmbeddednessTest) {
     cout << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Embeddedness Distance" << endl;
     for (const auto& rank: embeddedness_ranking) {
         cout << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
+    }
+}
+
+TEST_F(InitConf, Accuracy) {
+    unordered_map<string, double> accuracy_ranking;
+    accuracy_ranking.emplace("DCD", accuracy(dcd->c_ll, node_to_community_mapping, numberCommunities));
+    accuracy_ranking.emplace("StreamBP", accuracy(bp->bp_graph, node_to_community_mapping, numberCommunities));
+
+    EXPECT_GT(accuracy_ranking.size(), 0);
+    for (const auto& rank: accuracy_ranking) {
+        EXPECT_TRUE((rank.second >= 0.0) && (rank.second <= 1.0));
+    }
+
+    // Print the ranking
+    int index = 1;
+    outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Accuracy" << endl;
+    for (const auto& rank: accuracy_ranking) {
+        outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
     }
 }

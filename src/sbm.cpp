@@ -60,7 +60,10 @@ pair<int, int> Sbm::generateIntraCommunityEdge() {
     // Create a uniform distribution between node blocks
     uniform_int_distribution<int> nodeDistribution(0, numberNodes / numberCommunities - 1);
     int offset1 = nodeDistribution(gen);
-    int offset2 = nodeDistribution(gen);
+    int offset2;
+    do {
+        offset2 = nodeDistribution(gen);
+    } while(offset1 == offset2);
 
     return make_pair(communityTracker[community][offset1], communityTracker[community][offset2]);
 }

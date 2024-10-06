@@ -255,3 +255,33 @@ double embeddedness(const Graph& graph) {
     }
     return total_embeddedness;
 }
+
+double accuracy(const Graph& graph, unordered_map<int, int> original_labels, int numberCommunities) {
+    double max_accuracy = 0.0;
+    vector<int> perm(numberCommunities);
+    iota(perm.begin(), perm.end(), 0); // Fill with 0, 1, 2, ..., k-1
+
+    // Iterate over all permutations of the label set
+    do {
+        int correct_count = 0;
+
+        // Loop over all vertices
+        for (const Node& node: graph.nodes) {
+            int estimated_label = node.label; // Get the expected label
+            int true_label = perm[original_labels.at(node.id)]; // Get the permuted true label
+
+            if (estimated_label == true_label) {
+                correct_count++; // Count correct matches
+            }
+        }
+
+        // Compute accuracy for this permutation
+        double accuracy = static_cast<double>(correct_count) / graph.nodes.size();
+        if (accuracy > max_accuracy) {
+            max_accuracy = accuracy; // Keep track of the best accuracy
+        }
+
+    } while (next_permutation(perm.begin(), perm.end())); // Generate next permutation
+
+    return max_accuracy;
+}
