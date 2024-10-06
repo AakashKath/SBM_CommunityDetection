@@ -35,7 +35,7 @@ DynamicCommunityDetection::DynamicCommunityDetection(Graph graph, int communityC
     } while (mod > old_mod || m < addedEdges.size() || n < removedEdges.size());
 
     // Merge communities to expected number (Using Best Fit bin packing algorithm)
-    mergeCommunities();
+    // mergeCommunities(); // TODO: Disable merge algorithm
 }
 
 DynamicCommunityDetection::~DynamicCommunityDetection() {
