@@ -86,15 +86,30 @@ generated_sequence generateSequence(string filename) {
     string resultDirectory = to_string(nodes) + string("_") + to_string(edges) + string("_") + to_string(communities)
                             + string("_") + to_string(radius) + string("_") + to_string(int(inter_community_edge_probability * 100))
                             + string("_") + to_string(int(intra_community_edge_probability * 100));
-    filesystem::create_directories(TEST_OUTPUT_DIRECTORY + resultDirectory);
+    // filesystem::create_directories(TEST_OUTPUT_DIRECTORY + resultDirectory);
 
     Sbm sbm(nodes, communities, intra_community_edge_probability, inter_community_edge_probability);
-    sbm.sbm_graph.draw(resultDirectory + string("/original_graph.png"));
+    // sbm.sbm_graph.draw(resultDirectory + string("/original_graph.png"));
+
+    int nodeId, label, node1Id, node2Id, weight;
+    char comma;
+    ifstream node_labels(TEST_OUTPUT_DIRECTORY + string("citeseer.node_labels"));
+    while(node_labels >> nodeId >> comma >> label) {
+        Node& node = sbm.sbm_graph.getNode(nodeId);
+        node.label = label;
+    }
+    node_labels.close();
 
     vector<pair<int, int>> addedEdges{};
-    for (int i = 0; i < edges; ++i) {
-        addedEdges.push_back(sbm.generateEdge());
+    // for (int i = 0; i < edges; ++i) {
+    //     addedEdges.push_back(sbm.generateEdge());
+    // }
+
+    ifstream edgeFile(TEST_OUTPUT_DIRECTORY + string("citeseer.edges"));
+    while(edgeFile >> node1Id >> comma >> node2Id >> comma >> weight) {
+        sbm.sbm_graph.addUndirectedEdge(node1Id, node2Id, 1, true);
     }
+    edgeFile.close();
 
     // TODO: Edge removal is still used for algo testing purposes
     vector<pair<int, int>> removedEdges = {};

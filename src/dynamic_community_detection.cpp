@@ -8,6 +8,7 @@ DynamicCommunityDetection::DynamicCommunityDetection(Graph graph, int communityC
     old_mod = 0;
     int m = 0, n = 0;
     vector<pair<int, int>> changed_nodes;
+    int index = 1;
     do {
         changed_nodes = oneLevel(c_aux);
         updateCommunities(changed_nodes);
@@ -16,6 +17,7 @@ DynamicCommunityDetection::DynamicCommunityDetection(Graph graph, int communityC
         partitionToGraph();
 
         if (m < addedEdges.size()) {
+            cout << "DCD: " << index++ << endl;
             auto [src, dest] = addedEdges[m];
             auto [involved_communities, anodes] = affectedByAddition(src, dest);
             c_ll.addUndirectedEdge(src, dest, 1, true);

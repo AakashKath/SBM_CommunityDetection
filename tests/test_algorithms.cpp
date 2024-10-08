@@ -18,7 +18,7 @@ class SkipTestOnWindows : public ::testing::Test {
 class InitConf : public ::testing::Test {
     public:
         static ofstream outfile;
-        static DynamicCommunityDetection* dcd;
+        // static DynamicCommunityDetection* dcd;
         static BeliefPropagation* bp;
         static unordered_map<int, unordered_set<int>> community_to_node_mapping;
         static unordered_map<int, int> node_to_community_mapping;
@@ -44,20 +44,20 @@ class InitConf : public ::testing::Test {
             community_to_node_mapping = gs.sbm.sbm_graph.getCommunities();
 
             // Run all the algorithms
-            if (!get_cpu_times(start_idle_time, start_total_time)) {
-                cerr << "Failed to get CPU times at start." << endl;
-            }
-            long dcd_start_ram = getRAMUsage();
-            auto dcd_start = chrono::high_resolution_clock::now();
-            dcd = new DynamicCommunityDetection(gs.sbm.sbm_graph, gs.sbm.numberCommunities, gs.addedEdges, gs.removedEdges);
-            auto dcd_end = chrono::high_resolution_clock::now();
-            long dcd_end_ram = getRAMUsage();
-            if (!get_cpu_times(end_idle_time, end_total_time)) {
-                cerr << "Failed to get CPU times at end." << endl;
-            }
-            double dcd_cpu_usage = 100.0 * (1.0 - (end_idle_time - start_idle_time) / (end_total_time - start_total_time));
-            memory_ranking.emplace_back("DCD", dcd_cpu_usage, dcd_end_ram - dcd_start_ram);
-            chrono::duration<double, milli> dcd_duration = dcd_end - dcd_start;
+            // if (!get_cpu_times(start_idle_time, start_total_time)) {
+            //     cerr << "Failed to get CPU times at start." << endl;
+            // }
+            // long dcd_start_ram = getRAMUsage();
+            // auto dcd_start = chrono::high_resolution_clock::now();
+            // dcd = new DynamicCommunityDetection(gs.sbm.sbm_graph, gs.sbm.numberCommunities, gs.addedEdges, gs.removedEdges);
+            // auto dcd_end = chrono::high_resolution_clock::now();
+            // long dcd_end_ram = getRAMUsage();
+            // if (!get_cpu_times(end_idle_time, end_total_time)) {
+            //     cerr << "Failed to get CPU times at end." << endl;
+            // }
+            // double dcd_cpu_usage = 100.0 * (1.0 - (end_idle_time - start_idle_time) / (end_total_time - start_total_time));
+            // memory_ranking.emplace_back("DCD", dcd_cpu_usage, dcd_end_ram - dcd_start_ram);
+            // chrono::duration<double, milli> dcd_duration = dcd_end - dcd_start;
 
             if (!get_cpu_times(start_idle_time, start_total_time)) {
                 cerr << "Failed to get CPU times at start." << endl;
@@ -83,10 +83,10 @@ class InitConf : public ::testing::Test {
             chrono::duration<double, milli> bp_duration = bp_end - bp_start;
 
             // Draw predicted graphs
-            bp->bp_graph.draw(gs.resultDirectory + string("/bp_graph.png"));
-            dcd->c_ll.draw(gs.resultDirectory + string("/dcd.png"));
+            // bp->bp_graph.draw(gs.resultDirectory + string("/bp_graph.png"));
+            // dcd->c_ll.draw(gs.resultDirectory + string("/dcd.png"));
 
-            outfile.open(TEST_OUTPUT_DIRECTORY + gs.resultDirectory + string("/results.txt"));
+            outfile.open(TEST_OUTPUT_DIRECTORY + gs.resultDirectory + string(".txt"));
 
             // Print graph details
             outfile << "Number of Nodes: " << gs.sbm.sbm_graph.nodes.size() << endl
@@ -111,13 +111,13 @@ class InitConf : public ::testing::Test {
                 }
                 outfile << endl;
             }
-            outfile << "DCD Communities:" << endl;
-            for (const auto& community_cluster: dcd->c_ll.getCommunities()) {
-                for (const Node& node: community_cluster.second) {
-                    outfile << node.id << " ";
-                }
-                outfile << endl;
-            }
+            // outfile << "DCD Communities:" << endl;
+            // for (const auto& community_cluster: dcd->c_ll.getCommunities()) {
+            //     for (const Node& node: community_cluster.second) {
+            //         outfile << node.id << " ";
+            //     }
+            //     outfile << endl;
+            // }
 
             // Print edges
             outfile << endl << "Edge details:" << endl;
@@ -140,7 +140,7 @@ class InitConf : public ::testing::Test {
             }
 
             unordered_map<string, double> runtime_ranking;
-            runtime_ranking.emplace("DCD", dcd_duration.count());
+            // runtime_ranking.emplace("DCD", dcd_duration.count());
             runtime_ranking.emplace("StreamBP", bp_duration.count());
 
             // Print the ranking
@@ -153,7 +153,7 @@ class InitConf : public ::testing::Test {
         }
 
         static void TearDownTestSuite() {
-            delete dcd;
+            // delete dcd;
             delete bp;
 
             // Close the file after all tests have completed
@@ -164,7 +164,7 @@ class InitConf : public ::testing::Test {
 };
 
 ofstream InitConf::outfile;
-DynamicCommunityDetection* InitConf::dcd = nullptr;
+// DynamicCommunityDetection* InitConf::dcd = nullptr;
 BeliefPropagation* InitConf::bp = nullptr;
 unordered_map<int, unordered_set<int>> InitConf::community_to_node_mapping;
 unordered_map<int, int> InitConf::node_to_community_mapping;
@@ -178,7 +178,7 @@ int InitConf::numberCommunities;
 // Higher modularity values indicate better-defined community structures.
 TEST_F(InitConf, ModularityTest) {
     unordered_map<string, double> modularity_ranking;
-    modularity_ranking.emplace("DCD", modularity(dcd->c_ll));
+    // modularity_ranking.emplace("DCD", modularity(dcd->c_ll));
     modularity_ranking.emplace("StreamBP", modularity(bp->bp_graph));
 
     EXPECT_GT(modularity_ranking.size(), 0);
@@ -197,7 +197,7 @@ TEST_F(InitConf, ModularityTest) {
 // Symmetric difference between original and predicted communities. Less the better.
 TEST_F(InitConf, SymmetricDifferenceTest) {
     unordered_map<string, double> symmetric_difference_ranking;
-    symmetric_difference_ranking.emplace("DCD", symmetricDifference(dcd->c_ll, community_to_node_mapping));
+    // symmetric_difference_ranking.emplace("DCD", symmetricDifference(dcd->c_ll, community_to_node_mapping));
     symmetric_difference_ranking.emplace("StreamBP", symmetricDifference(bp->bp_graph, community_to_node_mapping));
 
     EXPECT_GT(symmetric_difference_ranking.size(), 0);
@@ -216,7 +216,7 @@ TEST_F(InitConf, SymmetricDifferenceTest) {
 // Harmonic mean of precision and recall. Higher values indicate better performance.
 TEST_F(InitConf, F1ScoreTest) {
     unordered_map<string, double> f1_score_ranking;
-    f1_score_ranking.emplace("DCD", f1Score(dcd->c_ll, node_to_community_mapping));
+    // f1_score_ranking.emplace("DCD", f1Score(dcd->c_ll, node_to_community_mapping));
     f1_score_ranking.emplace("StreamBP", f1Score(bp->bp_graph, node_to_community_mapping));
 
     EXPECT_GT(f1_score_ranking.size(), 0);
@@ -237,9 +237,9 @@ TEST_F(InitConf, LogLikelihoodTest) {
     unordered_map<string, double> log_likelihood_ranking;
     // Using bp_graph for original log likelihood as it doesn't make changes to the edge information
     double original_ll = loglikelihood(original_graph, bp->bp_graph);
-    double dcd_ll = loglikelihood(dcd->c_ll, dcd->c_ll);
+    // double dcd_ll = loglikelihood(dcd->c_ll, dcd->c_ll);
     double bp_ll = loglikelihood(bp->bp_graph, bp->bp_graph);
-    log_likelihood_ranking.emplace("DCD", fabs((original_ll - dcd_ll) / original_ll));
+    // log_likelihood_ranking.emplace("DCD", fabs((original_ll - dcd_ll) / original_ll));
     log_likelihood_ranking.emplace("StreamBP", fabs((original_ll - bp_ll) / original_ll));
 
     EXPECT_GT(log_likelihood_ranking.size(), 0);
@@ -260,7 +260,7 @@ TEST_F(InitConf, LogLikelihoodTest) {
 TEST_F(InitConf, EmbeddednessTest) {
     unordered_map<string, double> embeddedness_ranking;
     double original_e = embeddedness(original_graph);
-    embeddedness_ranking.emplace("DCD", embeddedness(dcd->c_ll));
+    // embeddedness_ranking.emplace("DCD", embeddedness(dcd->c_ll));
     embeddedness_ranking.emplace("StreamBP", embeddedness(bp->bp_graph));
 
     EXPECT_GT(embeddedness_ranking.size(), 0);
@@ -275,7 +275,7 @@ TEST_F(InitConf, EmbeddednessTest) {
 
 TEST_F(InitConf, Accuracy) {
     unordered_map<string, double> accuracy_ranking;
-    accuracy_ranking.emplace("DCD", accuracy(dcd->c_ll, node_to_community_mapping, numberCommunities));
+    // accuracy_ranking.emplace("DCD", accuracy(dcd->c_ll, node_to_community_mapping, numberCommunities));
     accuracy_ranking.emplace("StreamBP", accuracy(bp->bp_graph, node_to_community_mapping, numberCommunities));
 
     EXPECT_GT(accuracy_ranking.size(), 0);

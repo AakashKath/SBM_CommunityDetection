@@ -5,45 +5,80 @@
 #include <cmath>
 
 
-BeliefPropagation::BeliefPropagation(Graph graph, int communityCount, int impactRadius, double intra_community_edge_probability, double inter_community_edge_probability, vector<pair<int, int>> addedEdges, vector<pair<int, int>> removedEdges): bp_graph(graph), communityCount(communityCount), impactRadius(impactRadius), intra_community_edge_probability(intra_community_edge_probability), inter_community_edge_probability(inter_community_edge_probability), alphaValue(1 - 1 / communityCount) {
+BeliefPropagation::BeliefPropagation(Graph graph, int communityCount, int impactRadius, double intra_community_edge_probability, double inter_community_edge_probability, vector<pair<int, int>> addedEdges, vector<pair<int, int>> removedEdges): bp_graph(Graph(0)), communityCount(communityCount), impactRadius(impactRadius), intra_community_edge_probability(intra_community_edge_probability), inter_community_edge_probability(inter_community_edge_probability), alphaValue(1 - 1 / communityCount) {
     // Initialize noise as random numbers
     mt19937 gen(rd());
     uniform_int_distribution<int> dist(0, communityCount - 2);
     uniform_real_distribution<double> prob_dist(0.0, 1.0);
     int noiseCommunity;
-    for (const Node& node: bp_graph.nodes) {
+    // for (const Node& node: bp_graph.nodes) {
+    //     if (prob_dist(gen) > alphaValue) {
+    //         noiseCommunity = node.label;
+    //     } else {
+    //         noiseCommunity = dist(gen);
+    //         if (noiseCommunity >= node.label) {
+    //             noiseCommunity += 1;
+    //         }
+    //     }
+    //     sideInformation.emplace(node.id, noiseCommunity);
+    // }
+
+    for (int i = 0; i < graph.nodes.size(); ++i) {
+        cout << "StreamBP: " << i << endl;
+        bp_graph.addNode(i, i);
+
+        Node& sideNode = bp_graph.getNode(i);
         if (prob_dist(gen) > alphaValue) {
-            noiseCommunity = node.label;
+            noiseCommunity = sideNode.label;
         } else {
             noiseCommunity = dist(gen);
-            if (noiseCommunity >= node.label) {
+            if (noiseCommunity >= sideNode.label) {
                 noiseCommunity += 1;
             }
         }
-        sideInformation.emplace(node.id, noiseCommunity);
+        sideInformation.emplace(i, noiseCommunity);
+
+        if (i == 0) {
+            continue;
+        }
+
+        unordered_set<int> neighbors{};
+        for (const auto& edge: graph.getNode(i).edgeList) {
+            neighbors.insert(get<1>(edge));
+        }
+
+        for (const Node& node: bp_graph.nodes) {
+            auto foundNode = neighbors.find(node.id);
+            if (foundNode != neighbors.end()) {
+                bp_graph.addUndirectedEdge(node.id, i, 1, true);
+            }
+        }
+        processVertex(i, 100000);
     }
 
     // Add edge and update corresponding message vector
-    for (const auto& [node1Id, node2Id]: addedEdges) {
-        // Skip self edges
-        if (node1Id == node2Id) {
-            continue;
-        }
-        bp_graph.addUndirectedEdge(node1Id, node2Id, 1, true);
-        processVertex(node1Id, node2Id);
-        processVertex(node2Id, node1Id);
-    }
+    // int index = 1;
+    // for (const auto& [node1Id, node2Id]: addedEdges) {
+    //     // Skip self edges
+    //     cout << "StreamBP: " << index++ << endl;
+    //     if (node1Id == node2Id) {
+    //         continue;
+    //     }
+    //     bp_graph.addUndirectedEdge(node1Id, node2Id, 1, true);
+    //     processVertex(node1Id, node2Id);
+    //     processVertex(node2Id, node1Id);
+    // }
 
-    // Remove edge and update corresponding message vector
-    for (const auto& [node1Id, node2Id]: removedEdges) {
-        // Skip self edges
-        if (node1Id == node2Id) {
-            continue;
-        }
-        bp_graph.removeUndirectedEdge(node1Id, node2Id);
-        processVertex(node1Id, node2Id);
-        processVertex(node2Id, node1Id);
-    }
+    // // Remove edge and update corresponding message vector
+    // for (const auto& [node1Id, node2Id]: removedEdges) {
+    //     // Skip self edges
+    //     if (node1Id == node2Id) {
+    //         continue;
+    //     }
+    //     bp_graph.removeUndirectedEdge(node1Id, node2Id);
+    //     processVertex(node1Id, node2Id);
+    //     processVertex(node2Id, node1Id);
+    // }
 
     updateLabels();
 }
