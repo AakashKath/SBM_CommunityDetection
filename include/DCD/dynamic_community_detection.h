@@ -21,6 +21,7 @@ class DynamicCommunityDetection {
         Graph c_ul;
         double mod, old_mod;
         int communityCount;
+        random_device rd;
 
         void initialPartition(Graph& auxiliary_graph);
         vector<pair<int, int>> oneLevel(Graph& auxiliary_graph);
@@ -31,6 +32,7 @@ class DynamicCommunityDetection {
         void disbandCommunities(const unordered_set<int>& anodes);
         void syncCommunities(const pair<int, int>& involved_communities, const unordered_set<int>& anodes);
         void mergeCommunities();
+        double modularity_gain(Graph& auxiliary_graph, const Node& node, int old_community, int new_community);
 
     public:
         Graph c_ll;
