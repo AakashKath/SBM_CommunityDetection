@@ -32,7 +32,7 @@ class DynamicCommunityDetection {
         void disbandCommunities(const unordered_set<int>& anodes);
         void syncCommunities(const pair<int, int>& involved_communities, const unordered_set<int>& anodes);
         void mergeCommunities();
-        double modularity_gain(Graph& auxiliary_graph, const Node& node, int old_community, int new_community);
+        double modularity_gain(Graph& auxiliary_graph, const Node& node, int old_community, int new_community, int totalEdges = -1);
 
     public:
         Graph c_ll;

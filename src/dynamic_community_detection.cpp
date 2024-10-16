@@ -8,11 +8,12 @@ DynamicCommunityDetection::DynamicCommunityDetection(Graph graph, int communityC
     old_mod = 0;
     int m = 0, n = 0;
     vector<pair<int, int>> changed_nodes;
+    int total_c_ll_edges = c_ll.getTotalEdges();
     do {
         changed_nodes = oneLevel(c_aux);
         updateCommunities(changed_nodes);
         old_mod = mod;
-        mod = modularity(c_ll);
+        mod = modularity(c_ll, total_c_ll_edges);
         partitionToGraph();
 
         if (m < addedEdges.size()) {
@@ -21,6 +22,7 @@ DynamicCommunityDetection::DynamicCommunityDetection(Graph graph, int communityC
             c_ll.addUndirectedEdge(src, dest, 1, true);
             disbandCommunities(anodes);
             syncCommunities(involved_communities, anodes);
+            total_c_ll_edges++;
             m++;
         } else if (n < removedEdges.size()) {
             auto [src, dest] = removedEdges[n];
@@ -28,6 +30,7 @@ DynamicCommunityDetection::DynamicCommunityDetection(Graph graph, int communityC
             c_ll.removeUndirectedEdge(src, dest);
             disbandCommunities(anodes);
             syncCommunities(involved_communities, anodes);
+            total_c_ll_edges--;
             n++;
         }
 
@@ -86,6 +89,7 @@ vector<pair<int, int>> DynamicCommunityDetection::oneLevel(Graph& auxiliary_grap
     iota(node_indices.begin(), node_indices.end(), 0);
     mt19937 g(rd());
     shuffle(node_indices.begin(), node_indices.end(), g);
+    int totalEdges = auxiliary_graph.getTotalEdges();
 
     for (int idx: node_indices) {
         Node& node = auxiliary_graph.nodes[idx];
@@ -104,11 +108,12 @@ vector<pair<int, int>> DynamicCommunityDetection::oneLevel(Graph& auxiliary_grap
             }
         }
 
+        double mod_gain = 0.0;
         for (int community: neighboring_communities) {
             // Temporarily move node to new community
             node.label = community;
 
-            double mod_gain = modularity_gain(auxiliary_graph, node, current_community, community);
+            mod_gain = modularity_gain(auxiliary_graph, node, current_community, community, totalEdges);
 
             if (mod_gain > 0 && mod_gain > max_mod_gain) {
                 best_community = community;
@@ -163,11 +168,6 @@ vector<pair<int, int>> DynamicCommunityDetection::oneLevel(Graph& auxiliary_grap
 }
 
 void DynamicCommunityDetection::updateCommunities(const vector<pair<int, int>>& changed_nodes) {
-    unordered_map<int, vector<int>> communities;
-    for (const Node& node: c_ll.nodes) {
-        communities[node.label].push_back(node.id);
-    }
-
     for (const auto& node_pair : changed_nodes) {
         Node& node = c_ll.getNode(node_pair.first);
         node.label = node_pair.second;
@@ -315,17 +315,19 @@ void DynamicCommunityDetection::mergeCommunities() {
     }
 }
 
-double DynamicCommunityDetection::modularity_gain(Graph& auxiliary_graph, const Node& node, int old_community, int new_community) {
+double DynamicCommunityDetection::modularity_gain(Graph& auxiliary_graph, const Node& node, int old_community, int new_community, int totalEdges) {
     double mod_gain = 0.0;
-    int m = auxiliary_graph.getTotalEdges();
+    if (totalEdges == -1) {
+        totalEdges = auxiliary_graph.getTotalEdges();
+    }
 
     for (const auto& edge: node.edgeList) {
         const Node& neighbor = auxiliary_graph.getNode(get<1>(edge));
         int weight = get<2>(edge);
         if (neighbor.label == new_community) {
-            mod_gain += (1.0 / (2.0 * m)) * (weight - ((double) node.edgeList.size() * (double) neighbor.edgeList.size()) / (2.0 * m));
+            mod_gain += (1.0 / (2.0 * totalEdges)) * (weight - ((double) node.edgeList.size() * (double) neighbor.edgeList.size()) / (2.0 * totalEdges));
         } else if (neighbor.label == old_community) {
-            mod_gain -= (1.0 / (2.0 * m)) * (weight - ((double) node.edgeList.size() * (double) neighbor.edgeList.size()) / (2.0 * m));
+            mod_gain -= (1.0 / (2.0 * totalEdges)) * (weight - ((double) node.edgeList.size() * (double) neighbor.edgeList.size()) / (2.0 * totalEdges));
         }
     }
 

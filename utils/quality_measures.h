@@ -13,7 +13,7 @@
 
 using namespace std;
 
-double modularity(const Graph& graph);
+double modularity(const Graph& graph, int totalEdges = -1);
 double symmetricDifference(const Graph& graph, unordered_map<int, unordered_set<int>> original_labels);
 long getRAMUsage();
 double f1Score(const Graph& graph, unordered_map<int, int> original_labels);
