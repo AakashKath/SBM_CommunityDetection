@@ -9,8 +9,9 @@ DynamicCommunityDetection::DynamicCommunityDetection(Graph graph, int communityC
     int m = 0, n = 0;
     vector<pair<int, int>> changed_nodes;
     int total_c_ll_edges = c_ll.getTotalEdges();
+    bool firstIteration = true;
     do {
-        changed_nodes = oneLevel(c_aux);
+        changed_nodes = oneLevel(c_aux, firstIteration);
         updateCommunities(changed_nodes);
         old_mod = mod;
         mod = modularity(c_ll, total_c_ll_edges);
@@ -35,6 +36,7 @@ DynamicCommunityDetection::DynamicCommunityDetection(Graph graph, int communityC
         }
 
         c_aux = c_ul;
+        firstIteration = false;
     } while (mod > old_mod || m < addedEdges.size() || n < removedEdges.size());
 
     // Merge communities to expected number (Using Best Fit bin packing algorithm)
@@ -73,7 +75,7 @@ void DynamicCommunityDetection::initialPartition(Graph& c_aux) {
     }
 }
 
-vector<pair<int, int>> DynamicCommunityDetection::oneLevel(Graph& auxiliary_graph) {
+vector<pair<int, int>> DynamicCommunityDetection::oneLevel(Graph& auxiliary_graph, bool firstIteration) {
     unordered_map<int, vector<int>> communities;
     for (const Node& node: auxiliary_graph.nodes) {
         communities[node.label].push_back(node.id);
@@ -142,7 +144,14 @@ vector<pair<int, int>> DynamicCommunityDetection::oneLevel(Graph& auxiliary_grap
                         Node& movedNode = auxiliary_graph.getNode(movedNodeId);
                         movedNode.label = newLabel;
                         communities[newLabel].push_back(movedNodeId);
-                        changed_nodes.emplace_back(movedNodeId, newLabel);
+
+                        if (!firstIteration) {
+                            for (int c_ll_node_id: lower_network_communities.at(movedNodeId)) {
+                                changed_nodes.emplace_back(c_ll_node_id, newLabel);
+                            }
+                        } else {
+                            changed_nodes.emplace_back(movedNodeId, newLabel);
+                        }
                     }
                 }
                 communities.erase(current_community);
@@ -154,9 +163,9 @@ vector<pair<int, int>> DynamicCommunityDetection::oneLevel(Graph& auxiliary_grap
             communities[best_community].push_back(node.id);
 
             // write all nodes to changed nodes
-            if (communities.find(node.id) != communities.end()) {
-                for (int movedNodeId: lower_network_communities.at(node.id)) {
-                    changed_nodes.emplace_back(movedNodeId, best_community);
+            if (!firstIteration) {
+                for (int c_ll_node_id: lower_network_communities.at(node.id)) {
+                    changed_nodes.emplace_back(c_ll_node_id, best_community);
                 }
             } else {
                 changed_nodes.emplace_back(node.id, best_community);

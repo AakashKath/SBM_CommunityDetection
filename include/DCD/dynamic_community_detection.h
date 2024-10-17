@@ -24,7 +24,7 @@ class DynamicCommunityDetection {
         random_device rd;
 
         void initialPartition(Graph& auxiliary_graph);
-        vector<pair<int, int>> oneLevel(Graph& auxiliary_graph);
+        vector<pair<int, int>> oneLevel(Graph& auxiliary_graph, bool firstIteration);
         void updateCommunities(const vector<pair<int, int>>& changed_nodes);
         void partitionToGraph();
         pair<pair<int, int>, unordered_set<int>> affectedByAddition(int src, int dest) const;
