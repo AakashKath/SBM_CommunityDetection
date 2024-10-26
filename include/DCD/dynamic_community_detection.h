@@ -21,6 +21,7 @@ class DynamicCommunityDetection {
         Graph c_ul;
         double mod, old_mod;
         int communityCount;
+        int totalEdges;
 
         void initialPartition(Graph& auxiliary_graph);
         vector<pair<int, int>> oneLevel(Graph& auxiliary_graph);

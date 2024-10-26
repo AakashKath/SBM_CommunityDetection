@@ -1,10 +1,20 @@
 #include "dynamic_community_detection.h"
 
 
-DynamicCommunityDetection::DynamicCommunityDetection(Graph graph, int communityCount, vector<pair<int, int>> addedEdges, vector<pair<int, int>> removedEdges): c_ll(graph), c_ul(Graph(0)), communityCount(communityCount) {
+DynamicCommunityDetection::DynamicCommunityDetection(
+    Graph graph,
+    int communityCount,
+    vector<pair<int, int>> addedEdges,
+    vector<pair<int, int>> removedEdges
+):
+    c_ll(graph),
+    c_ul(Graph(0)),
+    communityCount(communityCount),
+    totalEdges(graph.getTotalEdges())
+{
     Graph c_aux = c_ll;
     initialPartition(c_aux);
-    mod = modularity(c_aux);
+    mod = modularity(c_aux, totalEdges);
     old_mod = 0;
     int m = 0, n = 0;
     vector<pair<int, int>> changed_nodes;
@@ -12,7 +22,7 @@ DynamicCommunityDetection::DynamicCommunityDetection(Graph graph, int communityC
         changed_nodes = oneLevel(c_aux);
         updateCommunities(changed_nodes);
         old_mod = mod;
-        mod = modularity(c_ll);
+        mod = modularity(c_ll, totalEdges);
         partitionToGraph();
 
         if (m < addedEdges.size()) {
@@ -21,8 +31,10 @@ DynamicCommunityDetection::DynamicCommunityDetection(Graph graph, int communityC
             c_ll.addUndirectedEdge(src, dest);
             disbandCommunities(anodes);
             syncCommunities(involved_communities, anodes);
+            totalEdges++;
             m++;
         } else if (n < removedEdges.size()) {
+            // TODO: Need to subtract edgeWeight from totalEdges
             auto [src, dest] = removedEdges[n];
             auto [involved_communities, anodes] = affectedByRemoval(src, dest);
             c_ll.removeUndirectedEdge(src, dest);
@@ -63,7 +75,7 @@ vector<pair<int, int>> DynamicCommunityDetection::oneLevel(Graph& auxiliary_grap
     random_device rd;
     mt19937 g(rd());
     shuffle(node_indices.begin(), node_indices.end(), g);
-    double initial_modularity = modularity(auxiliary_graph);
+    double initial_modularity = modularity(auxiliary_graph, totalEdges);
 
     for (int idx: node_indices) {
         Node& node = auxiliary_graph.nodes[idx];
@@ -91,10 +103,13 @@ vector<pair<int, int>> DynamicCommunityDetection::oneLevel(Graph& auxiliary_grap
                     movedNode.label = community;
                 }
             } catch (const out_of_range& e) {
-                cerr << "Cannot move to temp community. Community " << current_community << " not found. Please check the erase code at the end of the method." << endl;
+                cerr << "Cannot move to temp community. Community "
+                    << current_community
+                    << " not found. Please check the erase code at the end of the method."
+                    << endl;
             }
 
-            double updated_modularity = modularity(auxiliary_graph);
+            double updated_modularity = modularity(auxiliary_graph, totalEdges);
 
             double modularity_gain = updated_modularity - initial_modularity;
             if (modularity_gain >= 0 && modularity_gain > max_modularity_gain) {
@@ -110,7 +125,10 @@ vector<pair<int, int>> DynamicCommunityDetection::oneLevel(Graph& auxiliary_grap
                     movedNode.label = current_community;
                 }
             } catch (const out_of_range& e) {
-                cerr << "Cannot revert back to original community. Community " << current_community << " not found. Please check the erase code at the end of the method." << endl;
+                cerr << "Cannot revert back to original community. Community "
+                    << current_community
+                    << " not found. Please check the erase code at the end of the method."
+                    << endl;
             }
         }
 
@@ -124,13 +142,21 @@ vector<pair<int, int>> DynamicCommunityDetection::oneLevel(Graph& auxiliary_grap
                     changed_aux_nodes.insert(nodeId);
                 }
             } catch (const out_of_range& e) {
-                cerr << "Cannot move to best community. Community " << current_community << " not found. Please check the erase code at the end of the method." << endl;
+                cerr << "Cannot move to best community. Community "
+                    << current_community
+                    << " not found. Please check the erase code at the end of the method."
+                    << endl;
             }
             try {
                 communities.at(best_community).insert(communities.at(best_community).end(), communities.at(current_community).begin(), communities.at(current_community).end());
                 communities.erase(current_community);
             } catch (const out_of_range& e) {
-                cerr << "Cannot delete communities. Community " << current_community << " or " << best_community << " not found. Please check the erase code at the end of the method." << endl;
+                cerr << "Cannot delete communities. Community "
+                    << current_community
+                    << " or "
+                    << best_community
+                    << " not found. Please check the erase code at the end of the method."
+                    << endl;
             } catch (const exception& e) {
                 throw runtime_error("An unexpected error occurred: " + string(e.what()));
             }
