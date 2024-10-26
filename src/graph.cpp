@@ -136,7 +136,7 @@ Node& Graph::getNode(int nodeId) {
     return nodes[it->second];
 }
 
-void Graph::addEdge(int srcNodeId, int destNodeId, int edgeWeight, bool newlyAddedEdge) {
+void Graph::addEdge(int srcNodeId, int destNodeId, int edgeWeight) {
     // Don't add edge entry if edge weight is 0
     if (edgeWeight == 0) {
         return;
@@ -148,18 +148,15 @@ void Graph::addEdge(int srcNodeId, int destNodeId, int edgeWeight, bool newlyAdd
                     return get<1>(edge) == destNodeId;
                 });
     if (it != src.edgeList.end()) {
-        if (newlyAddedEdge) {
-            return;
-        }
         get<2>(*it) += edgeWeight;
     } else {
         src.edgeList.emplace_back(srcNodeId, destNodeId, edgeWeight);
     }
 }
 
-void Graph::addUndirectedEdge(int srcNodeId, int destNodeId, int edgeWeight, bool newlyAddedEdge) {
-    addEdge(srcNodeId, destNodeId, edgeWeight, newlyAddedEdge);
-    addEdge(destNodeId, srcNodeId, edgeWeight, newlyAddedEdge); // Since the graph is undirected
+void Graph::addUndirectedEdge(int srcNodeId, int destNodeId, int edgeWeight) {
+    addEdge(srcNodeId, destNodeId, edgeWeight);
+    addEdge(destNodeId, srcNodeId, edgeWeight); // Since the graph is undirected
 }
 
 int Graph::getEdgeWeight(int srcNodeId, int destNodeId) {

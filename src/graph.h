@@ -36,8 +36,8 @@ class Graph {
         string getEdgeColor(int srcLabel, int destLabel);
         string getNodeColor(int nodeLabel);
         int getTotalEdges() const;
-        void addEdge(int srcNodeId, int destNodeId, int edgeWeight = 1, bool newlyAddedEdge = false);
-        void addUndirectedEdge(int srcNodeId, int destNodeId, int edgeWeight = 1, bool newlyAddedEdge = false);
+        void addEdge(int srcNodeId, int destNodeId, int edgeWeight = 1);
+        void addUndirectedEdge(int srcNodeId, int destNodeId, int edgeWeight = 1);
         void removeEdge(int srcNodeId, int destNodeId);
         void removeUndirectedEdge(int srcNodeId, int destNodeId);
         int getEdgeWeight(int srcNodeId, int destNodeId);

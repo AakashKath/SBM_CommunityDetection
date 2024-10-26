@@ -18,7 +18,7 @@ DynamicCommunityDetection::DynamicCommunityDetection(Graph graph, int communityC
         if (m < addedEdges.size()) {
             auto [src, dest] = addedEdges[m];
             auto [involved_communities, anodes] = affectedByAddition(src, dest);
-            c_ll.addUndirectedEdge(src, dest, 1, true);
+            c_ll.addUndirectedEdge(src, dest);
             disbandCommunities(anodes);
             syncCommunities(involved_communities, anodes);
             m++;

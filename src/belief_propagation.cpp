@@ -29,7 +29,7 @@ BeliefPropagation::BeliefPropagation(Graph graph, int communityCount, int impact
         if (node1Id == node2Id) {
             continue;
         }
-        bp_graph.addUndirectedEdge(node1Id, node2Id, 1, true);
+        bp_graph.addUndirectedEdge(node1Id, node2Id);
         processVertex(node1Id, node2Id);
         processVertex(node2Id, node1Id);
     }

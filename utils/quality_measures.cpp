@@ -1,10 +1,13 @@
 #include "quality_measures.h"
 
-double modularity(const Graph& graph) {
-    int m = graph.getTotalEdges();
+double modularity(const Graph& graph, int totalEdges) {
+    if (totalEdges == -1) {
+        cerr << "Calculating total edges, please see if this can be computed in the beginning and passed as a parameter." << endl;
+        totalEdges = graph.getTotalEdges();
+    }
 
     // Modularity is 0 in case of no edges
-    if (m == 0) {
+    if (totalEdges == 0) {
         return 0.0;
     }
 
@@ -27,7 +30,7 @@ double modularity(const Graph& graph) {
             const Node& destNode = graph.getNode(destNodeId);
             try {
                 if (srcNode.label == destNode.label) {
-                    q += (weight - static_cast<double>(degrees.at(srcNode.id) * degrees.at(destNodeId)) / (2.0 * m));
+                    q += (weight - static_cast<double>(degrees.at(srcNode.id) * degrees.at(destNodeId)) / (2.0 * totalEdges));
                 }
             } catch (const out_of_range& e) {
                 throw out_of_range("Node " + to_string(srcNode.id) + " or " + to_string(destNodeId) + " not found.");
@@ -35,7 +38,7 @@ double modularity(const Graph& graph) {
         }
     }
 
-    return q / (2.0 * m);
+    return q / (2.0 * totalEdges);
 }
 
 int getSetDiff(unordered_set<int> predicted, unordered_set<int> original) {
