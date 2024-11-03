@@ -26,6 +26,32 @@ Sbm::~Sbm() {
     // Nothing to clean
 }
 
+// Move constructor
+Sbm::Sbm(Sbm&& other) noexcept
+    : numberNodes(other.numberNodes),
+        numberCommunities(other.numberCommunities),
+        intraCommunityEdgeProbability(other.intraCommunityEdgeProbability),
+        interCommunityEdgeProbability(other.interCommunityEdgeProbability),
+        communityBoundaryThreshold(other.communityBoundaryThreshold),
+        communityTracker(move(other.communityTracker)),
+        gen(move(other.gen)),
+        sbm_graph(move(other.sbm_graph)) {}
+
+// Move assignment operator
+Sbm& Sbm::operator=(Sbm&& other) noexcept {
+    if (this != &other) {
+        numberNodes = other.numberNodes;
+        numberCommunities = other.numberCommunities;
+        intraCommunityEdgeProbability = other.intraCommunityEdgeProbability;
+        interCommunityEdgeProbability = other.interCommunityEdgeProbability;
+        communityBoundaryThreshold = other.communityBoundaryThreshold;
+        communityTracker = move(other.communityTracker);
+        gen = move(other.gen);
+        sbm_graph = move(other.sbm_graph);
+    }
+    return *this;
+}
+
 pair<int, int> Sbm::generateEdge() {
     if (isIntraCommunityEdge()) {
         return generateIntraCommunityEdge();
@@ -84,22 +110,22 @@ Graph Sbm::generateSbm() {
 
     unordered_set<int> usedNumbers;
 
-    int blockSize = numberNodes/numberCommunities;
+    int blockSize = numberNodes / numberCommunities;
 
     for (int i = 0; i < numberCommunities; ++i) {
         for (int j = 0; j < blockSize; ++j) {
             int num;
             do {
                 num = dist(gen);
-            } while(usedNumbers.find(num) != usedNumbers.end());
+            } while (usedNumbers.find(num) != usedNumbers.end());
 
             // Update usedNumbers
             usedNumbers.insert(num);
 
             // Assign labels to vertices
-            Node& node = graph.getNode(num);
-            node.label = i;
-            node.offset = j;
+            Node* node = graph.getNode(num);
+            node->label = i;
+            node->offset = j;
 
             // Fill tracker matrix
             communityTracker[i][j] = num;

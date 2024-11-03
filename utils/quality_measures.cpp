@@ -15,25 +15,24 @@ double modularity(const Graph& graph, int totalEdges) {
     unordered_map<int, int> degrees{};
 
     // Degree counts weight on edge as well
-    for (const Node& node: graph.nodes) {
+    for (const auto& node: graph.nodes) {
         int degreeWeight = 0;
-        for (const auto& edge: node.edgeList) {
-            degreeWeight += get<2>(edge);
+        for (const auto& edge: node->edgeList) {
+            degreeWeight += edge.second;
         }
-        degrees.emplace(node.id, degreeWeight);
+        degrees.emplace(node->id, degreeWeight);
     }
 
-    for (const Node& srcNode: graph.nodes) {
-        for (const auto& edge: srcNode.edgeList) {
-            int destNodeId = get<1>(edge);
-            int weight = get<2>(edge);
-            const Node& destNode = graph.getNode(destNodeId);
+    for (const auto& srcNode: graph.nodes) {
+        for (const auto& edge: srcNode->edgeList) {
+            const Node* destNode = edge.first;
+            int weight = edge.second;
             try {
-                if (srcNode.label == destNode.label) {
-                    q += (weight - static_cast<double>(degrees.at(srcNode.id) * degrees.at(destNodeId)) / (2.0 * totalEdges));
+                if (srcNode->label == destNode->label) {
+                    q += (weight - static_cast<double>(degrees.at(srcNode->id) * degrees.at(destNode->id)) / (2.0 * totalEdges));
                 }
             } catch (const out_of_range& e) {
-                throw out_of_range("Node " + to_string(srcNode.id) + " or " + to_string(destNodeId) + " not found.");
+                throw out_of_range("Node " + to_string(srcNode->id) + " or " + to_string(destNode->id) + " not found.");
             }
         }
     }
@@ -66,8 +65,8 @@ double symmetricDifference(const Graph& graph, unordered_map<int, unordered_set<
     unordered_set<int> predicted_label_set, original_label_set;
     unordered_map<int, unordered_set<int>> predicted_labels;
     for (const auto& node: graph.nodes) {
-        predicted_labels[node.label].insert(node.id);
-        predicted_label_set.insert(node.label);
+        predicted_labels[node->label].insert(node->id);
+        predicted_label_set.insert(node->label);
     }
     for_each(original_labels.begin(), original_labels.end(), [&original_label_set](const auto& pair) {original_label_set.insert(pair.first);});
 
@@ -169,14 +168,14 @@ double f1Score(const Graph& graph, unordered_map<int, int> original_labels) {
 
     for (const auto& node1: graph.nodes) {
         for (const auto& node2: graph.nodes) {
-            if (node1.id == node2.id) {
+            if (node1->id == node2->id) {
                 continue;
             }
-            if (node1.label == node2.label && original_labels.at(node1.id) == original_labels.at(node2.id)) {
+            if (node1->label == node2->label && original_labels.at(node1->id) == original_labels.at(node2->id)) {
                 true_positive++;
-            } else if (original_labels.at(node1.id) == original_labels.at(node2.id) && node1.label != node2.label) {
+            } else if (original_labels.at(node1->id) == original_labels.at(node2->id) && node1->label != node2->label) {
                 false_negative++;
-            } else if (node1.label == node2.label && original_labels.at(node1.id) != original_labels.at(node2.id)) {
+            } else if (node1->label == node2->label && original_labels.at(node1->id) != original_labels.at(node2->id)) {
                 false_positive++;
             }
         }
@@ -194,10 +193,9 @@ double loglikelihood(const Graph& graph, const Graph& edgeGraph) {
     int intraCommunityPair = 0;
     int interCommunityPair = 0;
     for (const auto& edgeNode: edgeGraph.nodes) {
-        const Node& node = graph.getNode(edgeNode.id);
-        for (const auto& edge: edgeNode.edgeList) {
-            const Node& neighbor = graph.getNode(get<1>(edge));
-            if (node.label == neighbor.label) {
+        for (const auto& edge: edgeNode->edgeList) {
+            const Node* neighbor = edge.first;
+            if (edgeNode->label == neighbor->label) {
                 intraCommunityEdges++;
             } else {
                 interCommunityEdges++;
@@ -207,12 +205,12 @@ double loglikelihood(const Graph& graph, const Graph& edgeGraph) {
     intraCommunityEdges /= 2;
     interCommunityEdges /= 2;
 
-    for (const Node& node1: graph.nodes) {
-        for (const Node& node2: graph.nodes) {
-            if (node1.id == node2.id) {
+    for (const auto& node1: graph.nodes) {
+        for (const auto& node2: graph.nodes) {
+            if (node1->id == node2->id) {
                 continue;
             }
-            if (node1.label == node2.label) {
+            if (node1->label == node2->label) {
                 intraCommunityPair++;
             } else {
                 interCommunityPair++;
@@ -246,14 +244,14 @@ double embeddedness(const Graph& graph) {
     double total_embeddedness = 0.0;
     for (const auto& node: graph.nodes) {
         withinCommunityNodes = 0;
-        for (const auto& edge: node.edgeList) {
-            const Node& neighbor = graph.getNode(get<1>(edge));
-            if (node.label == neighbor.label) {
+        for (const auto& edge: node->edgeList) {
+            const Node* neighbor = edge.first;
+            if (node->label == neighbor->label) {
                 withinCommunityNodes++;
             }
         }
-        if (node.edgeList.size() > 0) {
-            total_embeddedness += static_cast<double>(withinCommunityNodes) / node.edgeList.size();
+        if (node->edgeList.size() > 0) {
+            total_embeddedness += static_cast<double>(withinCommunityNodes) / node->edgeList.size();
         }
     }
     return total_embeddedness;
@@ -269,9 +267,9 @@ double accuracy(const Graph& graph, unordered_map<int, int> original_labels, int
         int correct_count = 0;
 
         // Loop over all vertices
-        for (const Node& node: graph.nodes) {
-            int estimated_label = node.label; // Get the expected label
-            int true_label = perm[original_labels.at(node.id)]; // Get the permuted true label
+        for (const auto& node: graph.nodes) {
+            int estimated_label = node->label; // Get the expected label
+            int true_label = perm[original_labels.at(node->id)]; // Get the permuted true label
 
             if (estimated_label == true_label) {
                 correct_count++; // Count correct matches

@@ -25,6 +25,14 @@ class Sbm {
         Sbm(int numberNodes, int numberCommunities, double intraCommunityEdgeProbability, double interCommunityEdgeProbability);
         ~Sbm();
 
+        // Move constructor and assignment operator
+        Sbm(Sbm&& other) noexcept;
+        Sbm& operator=(Sbm&& other) noexcept;
+
+        // Deleted copy constructor and assignment operator
+        Sbm(const Sbm&) = delete;
+        Sbm& operator=(const Sbm&) = delete;
+
         Graph sbm_graph;
         int numberCommunities;
         double intraCommunityEdgeProbability;

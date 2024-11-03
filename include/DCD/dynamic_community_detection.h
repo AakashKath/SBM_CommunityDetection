@@ -19,19 +19,21 @@ typedef vector<unordered_set<int>> Communities;
 class DynamicCommunityDetection {
     private:
         Graph c_ul;
-        double mod, old_mod;
         int communityCount;
         int totalEdges;
+        random_device rd;
+        double epsilon_gain = 0.0001;
 
         void initialPartition(Graph& auxiliary_graph);
         vector<pair<int, int>> oneLevel(Graph& auxiliary_graph);
         void updateCommunities(const vector<pair<int, int>>& changed_nodes);
         void partitionToGraph();
-        pair<pair<int, int>, unordered_set<int>> affectedByAddition(int src, int dest) const;
-        pair<pair<int, int>, unordered_set<int>> affectedByRemoval(int src, int dest) const;
-        void disbandCommunities(const unordered_set<int>& anodes);
-        void syncCommunities(const pair<int, int>& involved_communities, const unordered_set<int>& anodes);
-        void mergeCommunities();
+        pair<pair<Node*, Node*>, unordered_set<Node*>> affectedByAddition(int src, int dest);
+        pair<pair<Node*, Node*>, unordered_set<Node*>> affectedByRemoval(int src, int dest);
+        void disbandCommunities(unordered_set<Node*>& anodes);
+        void syncCommunities(pair<Node*, Node*>& involved_communities, unordered_set<Node*>& anodes);
+        // void mergeCommunities();
+        double modularity_gain(const Node* node, int new_community, int old_community);
 
     public:
         Graph c_ll;
