@@ -154,7 +154,7 @@ unordered_map<int, vector<pair<Node*, Node*>>> BeliefPropagation::collectRNeighb
                 continue;
             }
 
-            int nextDistance = currentDistance + edge.second;
+            int nextDistance = currentDistance + 1;
             if (nextDistance <= radius) {
                 distQueue.emplace(nextNode, nextDistance);
                 neighborhood[nextDistance].emplace_back(nextNode, currentNode);
