@@ -98,7 +98,7 @@ double newmansModularity(const Graph& graph, bool useSplitPenality, bool useDens
     return modularity;
 }
 
-int getSetDiff(unordered_set<int> predicted, unordered_set<int> original) {
+int getSetDiff(set<int> predicted, set<int> original) {
     int diff_count = 0;
     for (const int & element: predicted) {
         if (original.find(element) == original.end()) {
@@ -108,7 +108,7 @@ int getSetDiff(unordered_set<int> predicted, unordered_set<int> original) {
     return diff_count;
 }
 
-int getCommonNodeCount(unordered_set<int> predicted, unordered_set<int> original) {
+int getCommonNodeCount(set<int> predicted, set<int> original) {
     int common_count = 0;
     for (const int& element: predicted) {
         if (original.find(element) != original.end()) {
@@ -118,10 +118,87 @@ int getCommonNodeCount(unordered_set<int> predicted, unordered_set<int> original
     return common_count;
 }
 
-double symmetricDifference(const Graph& graph, unordered_map<int, unordered_set<int>> original_labels) {
+// Function to compute the Jaccard Index between two sets
+double jaccardIndex(const set<int>& set1, const set<int>& set2) {
+    // Find intersection and union
+    vector<int> intersection, unionSet;
+    set_intersection(set1.begin(), set1.end(), set2.begin(), set2.end(), back_inserter(intersection));
+    set_union(set1.begin(), set1.end(), set2.begin(), set2.end(), back_inserter(unionSet));
+
+    // Compute Jaccard Index
+    return unionSet.empty() ? 0.0 : static_cast<double>(intersection.size()) / unionSet.size();
+}
+
+// Function to compute the maximum sum of Jaccard Indices over all permutations
+double maxJaccardSum(const Graph& graph, unordered_map<int, set<int>> original_labels, ofstream& outfile) {
+    double maxSum = 0.0;
+    vector<int> bestPermutation;
+
+    unordered_map<int, set<int>> predicted_labels = graph.getCommunities();
+
+    // Convert map values to a vector of sets
+    vector<set<int>> predicted_partition, original_partition;
+    for (const auto& community : predicted_labels) {
+        predicted_partition.push_back(community.second);
+    }
+    for (const auto& community : original_labels) {
+        original_partition.push_back(community.second);
+    }
+
+    // Pad with empty sets for better comparision
+    while (predicted_partition.size() < original_partition.size()) {
+        predicted_partition.push_back(set<int>());
+    }
+    while (predicted_partition.size() > original_partition.size()) {
+        original_partition.push_back(set<int>());
+    }
+
+    vector<int> perm(predicted_partition.size());
+    iota(perm.begin(), perm.end(), 0); // Initialize perm with indices 0, 1, ..., n-1
+
+    // Generate all permutations of indices
+    do {
+        double currentSum = 0.0;
+
+        // Calculate the sum of Jaccard Indices for this permutation
+        for (size_t i = 0; i < original_partition.size(); ++i) {
+            currentSum += jaccardIndex(original_partition[i], predicted_partition[perm[i]]);
+        }
+
+        // Update maxSum and best permutation if the current sum is larger
+        if (currentSum > maxSum) {
+            maxSum = currentSum;
+            bestPermutation = perm;
+        }
+
+    } while (next_permutation(perm.begin(), perm.end()));
+
+    outfile << "Best Permutation:" << endl;
+    for (size_t i = 0; i < original_partition.size(); ++i) {
+        outfile << "original_partition[" << i << "] vs predicted_partition[" << bestPermutation[i] << "] - ";
+
+        // Print original_partition and matched predicted_partition set for clarity
+        outfile << "{";
+        for (auto it = original_partition[i].begin(); it != original_partition[i].end(); ++it) {
+            if (it != original_partition[i].begin()) outfile << ", ";
+            outfile << *it;
+        }
+        outfile << "} vs {";
+        for (auto it = predicted_partition[bestPermutation[i]].begin(); it != predicted_partition[bestPermutation[i]].end(); ++it) {
+            if (it != predicted_partition[bestPermutation[i]].begin()) outfile << ", ";
+            outfile << *it;
+        }
+        outfile << "}" << endl;
+    }
+    outfile << endl;
+
+    return maxSum / original_partition.size();
+}
+
+double symmetricDifference(const Graph& graph, unordered_map<int, set<int>> original_labels) {
     int result = 0;
-    unordered_set<int> predicted_label_set, original_label_set;
-    unordered_map<int, unordered_set<int>> predicted_labels;
+    set<int> predicted_label_set, original_label_set;
+    unordered_map<int, set<int>> predicted_labels;
     for (const auto& node: graph.nodes) {
         predicted_labels[node->label].insert(node->id);
         predicted_label_set.insert(node->label);

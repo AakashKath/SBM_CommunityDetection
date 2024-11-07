@@ -2,7 +2,7 @@
 #define QUALITY_MEASURES_H
 
 #include "src/graph.h"
-#include <unordered_set>
+#include <set>
 #include <queue>
 #include <limits>
 #include <tuple>
@@ -14,7 +14,7 @@
 using namespace std;
 
 double modularity(const Graph& graph, int totalEdges = -1);
-double symmetricDifference(const Graph& graph, unordered_map<int, unordered_set<int>> original_labels);
+double symmetricDifference(const Graph& graph, unordered_map<int, set<int>> original_labels);
 long getRAMUsage();
 double f1Score(const Graph& graph, unordered_map<int, int> original_labels);
 // edgeGraph used for original graph as we dont keep edge information on this graph
@@ -24,5 +24,6 @@ bool get_cpu_times(size_t &idle_time, size_t &total_time);
 vector<size_t> get_cpu_times();
 double accuracy(const Graph& graph, unordered_map<int, int> original_labels, int numberCommunities);
 double newmansModularity(const Graph& graph, bool useSplitPenality = false, bool useDensity = false);
+double maxJaccardSum(const Graph& graph, unordered_map<int, set<int>> original_labels, ofstream& outfile);
 
 #endif // QUALITY_MEASURES_H
