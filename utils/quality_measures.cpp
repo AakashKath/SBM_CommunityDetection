@@ -392,7 +392,7 @@ double embeddedness(const Graph& graph) {
     return total_embeddedness;
 }
 
-double accuracy(const Graph& graph, unordered_map<int, int> original_labels, int numberCommunities) {
+double accuracy(const Graph& graph, unordered_map<int, int> original_labels, int numberCommunities, ofstream& outfile) {
     double max_accuracy = 0.0;
     vector<int> bestPermutation;
     vector<int> perm(max(static_cast<int>(numberCommunities), static_cast<int>(graph.getCommunities().size())));
@@ -420,6 +420,15 @@ double accuracy(const Graph& graph, unordered_map<int, int> original_labels, int
         }
 
     } while (next_permutation(perm.begin(), perm.end())); // Generate next permutation
+
+    int nodeMovement = 0;
+    for (const auto& node: graph.nodes) {
+        if (bestPermutation[node->label] != original_labels.at(node->id)) {
+            nodeMovement++;
+        }
+    }
+    outfile << "Number of node to be moved: " << nodeMovement << endl;
+    outfile << "Ratio of node to be moved w.r.t. total nodes: " << static_cast<double>(nodeMovement) / graph.nodes.size() << endl;
 
     return max_accuracy;
 }

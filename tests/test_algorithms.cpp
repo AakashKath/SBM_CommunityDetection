@@ -273,10 +273,11 @@ TEST_F(InitConf, EmbeddednessTest) {
     }
 }
 
+// Also called MoveTest, determines minimum number of nodes that needs to moved to different community to get same partition
 TEST_F(InitConf, AccuracyTest) {
     unordered_map<string, double> accuracy_ranking;
-    accuracy_ranking.emplace("DCD", accuracy(dcd->c_ll, node_to_community_mapping, numberCommunities));
-    accuracy_ranking.emplace("StreamBP", accuracy(bp->bp_graph, node_to_community_mapping, numberCommunities));
+    accuracy_ranking.emplace("DCD", accuracy(dcd->c_ll, node_to_community_mapping, numberCommunities, outfile));
+    accuracy_ranking.emplace("StreamBP", accuracy(bp->bp_graph, node_to_community_mapping, numberCommunities, outfile));
 
     EXPECT_GT(accuracy_ranking.size(), 0);
     for (const auto& rank: accuracy_ranking) {
