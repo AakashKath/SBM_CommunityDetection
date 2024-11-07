@@ -313,7 +313,7 @@ void Graph::removeNode(int nodeId) {
     }
 }
 
-unordered_map<int, int> Graph::getLabels() {
+unordered_map<int, int> Graph::getLabels() const {
     unordered_map<int, int> predicted_labels{};
     for (const auto& node: nodes) {
         predicted_labels.emplace(node->id, node->label);
@@ -322,7 +322,7 @@ unordered_map<int, int> Graph::getLabels() {
     return predicted_labels;
 }
 
-unordered_map<int, set<int>> Graph::getCommunities() {
+unordered_map<int, set<int>> Graph::getCommunities() const {
     unordered_map<int, set<int>> community_clusters{};
     for (const auto& node: nodes) {
         community_clusters[node->label].insert(node->id);

@@ -57,8 +57,8 @@ class Graph {
         void removeNode(int nodeId);
         const Node* getNode(int nodeId) const;
         Node* getNode(int nodeId);
-        unordered_map<int, int> getLabels();
-        unordered_map<int, set<int>> getCommunities();
+        unordered_map<int, int> getLabels() const;
+        unordered_map<int, set<int>> getCommunities() const;
 };
 
 #endif // GRAPH_H
