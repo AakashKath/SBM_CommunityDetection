@@ -6,6 +6,10 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <random>
+#include <algorithm>
+#include <queue>
+#include <numeric>
+#include <cmath>
 
 using namespace std;
 
@@ -29,9 +33,9 @@ class BeliefPropagation {
         unordered_map<int, int> sideInformation;    // Side information for now is noise labels
 
         void processVertex(int nodeId, int involvedNeighborId);
-        vector<double> StreamBP(const Node& node, vector<int> excludedNodeIds, int noiseLabel);
-        unordered_map<int, vector<pair<int, int>>> collectRNeighborhood(int nodeId, int radius);
-        double BP_0(int noiseLabel, int currentCommunity);
+        vector<double> StreamBP(const Node* node, const vector<int> excludedNodeIds, int noiseLabel);
+        unordered_map<int, vector<pair<Node*, Node*>>> collectRNeighborhood(Node* node, int radius);
+        double BP_0(int noiseLabel, int currentCommunity) const;
         void updateLabels();
 };
 

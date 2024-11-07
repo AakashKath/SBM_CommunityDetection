@@ -8,7 +8,6 @@ generated_sequence generateSequence(string filename) {
     double intra_community_edge_probability, inter_community_edge_probability;
     bool uneven_node_distribution;
 
-    // TODO: Absolute path is used for testing purposes, as relative path doesn't work with vscode debugger
     string configPath = CONFIG_DIRECTORY + filename;
 
     // Read json file for graph configurations
@@ -86,7 +85,9 @@ generated_sequence generateSequence(string filename) {
     string resultDirectory = to_string(nodes) + string("_") + to_string(edges) + string("_") + to_string(communities)
                             + string("_") + to_string(radius) + string("_") + to_string(int(inter_community_edge_probability * 100))
                             + string("_") + to_string(int(intra_community_edge_probability * 100));
-    filesystem::create_directories(TEST_OUTPUT_DIRECTORY + resultDirectory);
+    if (!filesystem::exists(TEST_OUTPUT_DIRECTORY + resultDirectory)) {
+        filesystem::create_directories(TEST_OUTPUT_DIRECTORY + resultDirectory);
+    }
 
     Sbm sbm(nodes, communities, intra_community_edge_probability, inter_community_edge_probability);
     sbm.sbm_graph.draw(resultDirectory + string("/original_graph.png"));
@@ -100,11 +101,11 @@ generated_sequence generateSequence(string filename) {
     vector<pair<int, int>> removedEdges = {};
 
     return generated_sequence{
-        sbm = sbm,
-        algorithm_number = algorithm_number,
-        radius = radius,
-        addedEdges = addedEdges,
-        removedEdges = removedEdges,
-        resultDirectory = resultDirectory
+        .sbm = move(sbm),
+        .algorithm_number = algorithm_number,
+        .radius = radius,
+        .addedEdges = addedEdges,
+        .removedEdges = removedEdges,
+        .resultDirectory = resultDirectory
     };
 }

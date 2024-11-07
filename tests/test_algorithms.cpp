@@ -20,7 +20,7 @@ class InitConf : public ::testing::Test {
         static ofstream outfile;
         static DynamicCommunityDetection* dcd;
         static BeliefPropagation* bp;
-        static unordered_map<int, unordered_set<int>> community_to_node_mapping;
+        static unordered_map<int, set<int>> community_to_node_mapping;
         static unordered_map<int, int> node_to_community_mapping;
         static double interCommunityEdgeProbability;
         static double intraCommunityEdgeProbability;
@@ -166,7 +166,7 @@ class InitConf : public ::testing::Test {
 ofstream InitConf::outfile;
 DynamicCommunityDetection* InitConf::dcd = nullptr;
 BeliefPropagation* InitConf::bp = nullptr;
-unordered_map<int, unordered_set<int>> InitConf::community_to_node_mapping;
+unordered_map<int, set<int>> InitConf::community_to_node_mapping;
 unordered_map<int, int> InitConf::node_to_community_mapping;
 double InitConf::interCommunityEdgeProbability;
 double InitConf::intraCommunityEdgeProbability;
@@ -232,7 +232,7 @@ TEST_F(InitConf, F1ScoreTest) {
     }
 }
 
-// How close is the predicted graph to the original graph. Higher log-likelihood distance indicates more closer to the original graph.
+// How close is the predicted graph to the original graph. Lower log-likelihood distance indicates more closer to the original graph.
 TEST_F(InitConf, LogLikelihoodTest) {
     unordered_map<string, double> log_likelihood_ranking;
     // Using bp_graph for original log likelihood as it doesn't make changes to the edge information
@@ -273,10 +273,11 @@ TEST_F(InitConf, EmbeddednessTest) {
     }
 }
 
-TEST_F(InitConf, Accuracy) {
+// Also called MoveTest, determines minimum number of nodes that needs to moved to different community to get same partition
+TEST_F(InitConf, AccuracyTest) {
     unordered_map<string, double> accuracy_ranking;
-    accuracy_ranking.emplace("DCD", accuracy(dcd->c_ll, node_to_community_mapping, numberCommunities));
-    accuracy_ranking.emplace("StreamBP", accuracy(bp->bp_graph, node_to_community_mapping, numberCommunities));
+    accuracy_ranking.emplace("DCD", accuracy(dcd->c_ll, node_to_community_mapping, numberCommunities, outfile));
+    accuracy_ranking.emplace("StreamBP", accuracy(bp->bp_graph, node_to_community_mapping, numberCommunities, outfile));
 
     EXPECT_GT(accuracy_ranking.size(), 0);
     for (const auto& rank: accuracy_ranking) {
@@ -287,6 +288,26 @@ TEST_F(InitConf, Accuracy) {
     int index = 1;
     outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Accuracy" << endl;
     for (const auto& rank: accuracy_ranking) {
+        outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
+    }
+}
+
+// Jaccard sum compares the best permutation of original and predicted parition
+// It compares the ratio of intersection and union
+TEST_F(InitConf, JaccardSumTest) {
+    unordered_map<string, double> jaccard_sum;
+    jaccard_sum.emplace("DCD", maxJaccardSum(dcd->c_ll, community_to_node_mapping, outfile));
+    jaccard_sum.emplace("StreamBP", maxJaccardSum(bp->bp_graph, community_to_node_mapping, outfile));
+
+    EXPECT_GT(jaccard_sum.size(), 0);
+    for (const auto& rank: jaccard_sum) {
+        EXPECT_TRUE((rank.second >= 0.0) && (rank.second <= 1.0));
+    }
+
+    // Print the ranking
+    int index = 1;
+    outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Max Jaccard Sum" << endl;
+    for (const auto& rank: jaccard_sum) {
         outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
     }
 }

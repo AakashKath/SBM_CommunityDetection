@@ -1,10 +1,13 @@
 #include "quality_measures.h"
 
-double modularity(const Graph& graph) {
-    int m = graph.getTotalEdges();
+double modularity(const Graph& graph, int totalEdges) {
+    if (totalEdges == -1) {
+        cerr << "Calculating total edges, please see if this can be computed in the beginning and passed as a parameter." << endl;
+        totalEdges = graph.getTotalEdges();
+    }
 
     // Modularity is 0 in case of no edges
-    if (m == 0) {
+    if (totalEdges == 0) {
         return 0.0;
     }
 
@@ -12,33 +15,90 @@ double modularity(const Graph& graph) {
     unordered_map<int, int> degrees{};
 
     // Degree counts weight on edge as well
-    for (const Node& node: graph.nodes) {
+    for (const auto& node: graph.nodes) {
         int degreeWeight = 0;
-        for (const auto& edge: node.edgeList) {
-            degreeWeight += get<2>(edge);
+        for (const auto& edge: node->edgeList) {
+            degreeWeight += edge.second;
         }
-        degrees.emplace(node.id, degreeWeight);
+        degrees.emplace(node->id, degreeWeight);
     }
 
-    for (const Node& srcNode: graph.nodes) {
-        for (const auto& edge: srcNode.edgeList) {
-            int destNodeId = get<1>(edge);
-            int weight = get<2>(edge);
-            const Node& destNode = graph.getNode(destNodeId);
+    for (const auto& srcNode: graph.nodes) {
+        for (const auto& edge: srcNode->edgeList) {
+            const Node* destNode = edge.first;
+            int weight = edge.second;
             try {
-                if (srcNode.label == destNode.label) {
-                    q += (weight - static_cast<double>(degrees.at(srcNode.id) * degrees.at(destNodeId)) / (2.0 * m));
+                if (srcNode->label == destNode->label) {
+                    q += (weight - static_cast<double>(degrees.at(srcNode->id) * degrees.at(destNode->id)) / (2.0 * totalEdges));
                 }
             } catch (const out_of_range& e) {
-                throw out_of_range("Node " + to_string(srcNode.id) + " or " + to_string(destNodeId) + " not found.");
+                throw out_of_range("Node " + to_string(srcNode->id) + " or " + to_string(destNode->id) + " not found.");
             }
         }
     }
 
-    return q / (2.0 * m);
+    return q / (2.0 * totalEdges);
 }
 
-int getSetDiff(unordered_set<int> predicted, unordered_set<int> original) {
+double newmansModularity(const Graph& graph, bool useSplitPenality, bool useDensity) {
+    double modularity = 0.0;
+    int totalEdges = 0;
+    unordered_map<int, unordered_map<int, int>> communityEdges{};
+    unordered_map<int, int> communityCardinality{};
+
+    for (const auto& srcNode: graph.nodes) {
+        for (const auto& edge: srcNode->edgeList) {
+            communityEdges[srcNode->label][edge.first->label] += edge.second;
+            totalEdges += edge.second;
+        }
+        communityCardinality[srcNode->label]++;
+    }
+    totalEdges /= 2;
+
+    for (auto& srcCommunityMap: communityEdges) {
+        for (auto& destCommunityMap: srcCommunityMap.second) {
+            if (srcCommunityMap.first == destCommunityMap.first) {
+                destCommunityMap.second /= 2;
+            }
+        }
+    }
+
+    for (const auto& srcCommunityMap: communityEdges) {
+        int e_in = 0;
+        int e_out = 0;
+        double e_ci_cj = 0.0;
+        double d_ci = 0.0;
+        double d_ci_cj = 0.0;
+        for (const auto& destCommunityMap: srcCommunityMap.second) {
+            if (srcCommunityMap.first == destCommunityMap.first) {
+                e_in += destCommunityMap.second;
+            } else {
+                e_out += destCommunityMap.second;
+            }
+            if (useSplitPenality) {
+                if (!useDensity) {
+                    d_ci_cj = 1.0;
+                } else {
+                    d_ci_cj = static_cast<double>(destCommunityMap.second) / (communityCardinality.at(srcCommunityMap.first) * communityCardinality.at(destCommunityMap.first));
+                }
+                e_ci_cj += (destCommunityMap.second * d_ci_cj) / (2.0 * totalEdges);
+            }
+        }
+        int communitySize = communityCardinality.at(srcCommunityMap.first);
+        if (!useDensity) {
+            d_ci = 1.0;
+        } else if (communitySize <= 1) {
+            d_ci = 0.0;
+        } else {
+            d_ci = (2.0 * e_in) / static_cast<double>(communitySize * (communitySize - 1));
+        }
+        modularity += (e_in * d_ci / totalEdges) - pow((static_cast<double>((2.0 * e_in + e_out) * d_ci) / (2.0 * totalEdges)), 2) - e_ci_cj;
+    }
+
+    return modularity;
+}
+
+int getSetDiff(set<int> predicted, set<int> original) {
     int diff_count = 0;
     for (const int & element: predicted) {
         if (original.find(element) == original.end()) {
@@ -48,7 +108,7 @@ int getSetDiff(unordered_set<int> predicted, unordered_set<int> original) {
     return diff_count;
 }
 
-int getCommonNodeCount(unordered_set<int> predicted, unordered_set<int> original) {
+int getCommonNodeCount(set<int> predicted, set<int> original) {
     int common_count = 0;
     for (const int& element: predicted) {
         if (original.find(element) != original.end()) {
@@ -58,13 +118,90 @@ int getCommonNodeCount(unordered_set<int> predicted, unordered_set<int> original
     return common_count;
 }
 
-double symmetricDifference(const Graph& graph, unordered_map<int, unordered_set<int>> original_labels) {
+// Function to compute the Jaccard Index between two sets
+double jaccardIndex(const set<int>& set1, const set<int>& set2) {
+    // Find intersection and union
+    vector<int> intersection, unionSet;
+    set_intersection(set1.begin(), set1.end(), set2.begin(), set2.end(), back_inserter(intersection));
+    set_union(set1.begin(), set1.end(), set2.begin(), set2.end(), back_inserter(unionSet));
+
+    // Compute Jaccard Index
+    return unionSet.empty() ? 0.0 : static_cast<double>(intersection.size()) / unionSet.size();
+}
+
+// Function to compute the maximum sum of Jaccard Indices over all permutations
+double maxJaccardSum(const Graph& graph, unordered_map<int, set<int>> original_labels, ofstream& outfile) {
+    double maxSum = 0.0;
+    vector<int> bestPermutation;
+
+    unordered_map<int, set<int>> predicted_labels = graph.getCommunities();
+
+    // Convert map values to a vector of sets
+    vector<set<int>> predicted_partition, original_partition;
+    for (const auto& community : predicted_labels) {
+        predicted_partition.push_back(community.second);
+    }
+    for (const auto& community : original_labels) {
+        original_partition.push_back(community.second);
+    }
+
+    // Pad with empty sets for better comparision
+    while (predicted_partition.size() < original_partition.size()) {
+        predicted_partition.push_back(set<int>());
+    }
+    while (predicted_partition.size() > original_partition.size()) {
+        original_partition.push_back(set<int>());
+    }
+
+    vector<int> perm(predicted_partition.size());
+    iota(perm.begin(), perm.end(), 0); // Initialize perm with indices 0, 1, ..., n-1
+
+    // Generate all permutations of indices
+    do {
+        double currentSum = 0.0;
+
+        // Calculate the sum of Jaccard Indices for this permutation
+        for (size_t i = 0; i < original_partition.size(); ++i) {
+            currentSum += jaccardIndex(original_partition[i], predicted_partition[perm[i]]);
+        }
+
+        // Update maxSum and best permutation if the current sum is larger
+        if (currentSum > maxSum) {
+            maxSum = currentSum;
+            bestPermutation = perm;
+        }
+
+    } while (next_permutation(perm.begin(), perm.end()));
+
+    outfile << "Best Permutation:" << endl;
+    for (size_t i = 0; i < original_partition.size(); ++i) {
+        outfile << "original_partition[" << i << "] vs predicted_partition[" << bestPermutation[i] << "] - ";
+
+        // Print original_partition and matched predicted_partition set for clarity
+        outfile << "{";
+        for (auto it = original_partition[i].begin(); it != original_partition[i].end(); ++it) {
+            if (it != original_partition[i].begin()) outfile << ", ";
+            outfile << *it;
+        }
+        outfile << "} vs {";
+        for (auto it = predicted_partition[bestPermutation[i]].begin(); it != predicted_partition[bestPermutation[i]].end(); ++it) {
+            if (it != predicted_partition[bestPermutation[i]].begin()) outfile << ", ";
+            outfile << *it;
+        }
+        outfile << "}" << endl;
+    }
+    outfile << endl;
+
+    return maxSum / original_partition.size();
+}
+
+double symmetricDifference(const Graph& graph, unordered_map<int, set<int>> original_labels) {
     int result = 0;
-    unordered_set<int> predicted_label_set, original_label_set;
-    unordered_map<int, unordered_set<int>> predicted_labels;
+    set<int> predicted_label_set, original_label_set;
+    unordered_map<int, set<int>> predicted_labels;
     for (const auto& node: graph.nodes) {
-        predicted_labels[node.label].insert(node.id);
-        predicted_label_set.insert(node.label);
+        predicted_labels[node->label].insert(node->id);
+        predicted_label_set.insert(node->label);
     }
     for_each(original_labels.begin(), original_labels.end(), [&original_label_set](const auto& pair) {original_label_set.insert(pair.first);});
 
@@ -166,14 +303,14 @@ double f1Score(const Graph& graph, unordered_map<int, int> original_labels) {
 
     for (const auto& node1: graph.nodes) {
         for (const auto& node2: graph.nodes) {
-            if (node1.id == node2.id) {
+            if (node1->id == node2->id) {
                 continue;
             }
-            if (node1.label == node2.label && original_labels.at(node1.id) == original_labels.at(node2.id)) {
+            if (node1->label == node2->label && original_labels.at(node1->id) == original_labels.at(node2->id)) {
                 true_positive++;
-            } else if (original_labels.at(node1.id) == original_labels.at(node2.id) && node1.label != node2.label) {
+            } else if (original_labels.at(node1->id) == original_labels.at(node2->id) && node1->label != node2->label) {
                 false_negative++;
-            } else if (node1.label == node2.label && original_labels.at(node1.id) != original_labels.at(node2.id)) {
+            } else if (node1->label == node2->label && original_labels.at(node1->id) != original_labels.at(node2->id)) {
                 false_positive++;
             }
         }
@@ -191,10 +328,9 @@ double loglikelihood(const Graph& graph, const Graph& edgeGraph) {
     int intraCommunityPair = 0;
     int interCommunityPair = 0;
     for (const auto& edgeNode: edgeGraph.nodes) {
-        const Node& node = graph.getNode(edgeNode.id);
-        for (const auto& edge: edgeNode.edgeList) {
-            const Node& neighbor = graph.getNode(get<1>(edge));
-            if (node.label == neighbor.label) {
+        for (const auto& edge: edgeNode->edgeList) {
+            const Node* neighbor = edge.first;
+            if (edgeNode->label == neighbor->label) {
                 intraCommunityEdges++;
             } else {
                 interCommunityEdges++;
@@ -204,12 +340,12 @@ double loglikelihood(const Graph& graph, const Graph& edgeGraph) {
     intraCommunityEdges /= 2;
     interCommunityEdges /= 2;
 
-    for (const Node& node1: graph.nodes) {
-        for (const Node& node2: graph.nodes) {
-            if (node1.id == node2.id) {
+    for (const auto& node1: graph.nodes) {
+        for (const auto& node2: graph.nodes) {
+            if (node1->id == node2->id) {
                 continue;
             }
-            if (node1.label == node2.label) {
+            if (node1->label == node2->label) {
                 intraCommunityPair++;
             } else {
                 interCommunityPair++;
@@ -243,22 +379,23 @@ double embeddedness(const Graph& graph) {
     double total_embeddedness = 0.0;
     for (const auto& node: graph.nodes) {
         withinCommunityNodes = 0;
-        for (const auto& edge: node.edgeList) {
-            const Node& neighbor = graph.getNode(get<1>(edge));
-            if (node.label == neighbor.label) {
+        for (const auto& edge: node->edgeList) {
+            const Node* neighbor = edge.first;
+            if (node->label == neighbor->label) {
                 withinCommunityNodes++;
             }
         }
-        if (node.edgeList.size() > 0) {
-            total_embeddedness += static_cast<double>(withinCommunityNodes) / node.edgeList.size();
+        if (node->edgeList.size() > 0) {
+            total_embeddedness += static_cast<double>(withinCommunityNodes) / node->edgeList.size();
         }
     }
     return total_embeddedness;
 }
 
-double accuracy(const Graph& graph, unordered_map<int, int> original_labels, int numberCommunities) {
+double accuracy(const Graph& graph, unordered_map<int, int> original_labels, int numberCommunities, ofstream& outfile) {
     double max_accuracy = 0.0;
-    vector<int> perm(numberCommunities);
+    vector<int> bestPermutation;
+    vector<int> perm(max(static_cast<int>(numberCommunities), static_cast<int>(graph.getCommunities().size())));
     iota(perm.begin(), perm.end(), 0); // Fill with 0, 1, 2, ..., k-1
 
     // Iterate over all permutations of the label set
@@ -266,9 +403,9 @@ double accuracy(const Graph& graph, unordered_map<int, int> original_labels, int
         int correct_count = 0;
 
         // Loop over all vertices
-        for (const Node& node: graph.nodes) {
-            int estimated_label = node.label; // Get the expected label
-            int true_label = perm[original_labels.at(node.id)]; // Get the permuted true label
+        for (const auto& node: graph.nodes) {
+            int estimated_label = perm[node->label]; // Get the permuted expected label
+            int true_label = original_labels.at(node->id); // Get the true label
 
             if (estimated_label == true_label) {
                 correct_count++; // Count correct matches
@@ -279,9 +416,19 @@ double accuracy(const Graph& graph, unordered_map<int, int> original_labels, int
         double accuracy = static_cast<double>(correct_count) / graph.nodes.size();
         if (accuracy > max_accuracy) {
             max_accuracy = accuracy; // Keep track of the best accuracy
+            bestPermutation = perm;
         }
 
     } while (next_permutation(perm.begin(), perm.end())); // Generate next permutation
+
+    int nodeMovement = 0;
+    for (const auto& node: graph.nodes) {
+        if (bestPermutation[node->label] != original_labels.at(node->id)) {
+            nodeMovement++;
+        }
+    }
+    outfile << "Number of node to be moved: " << nodeMovement << endl;
+    outfile << "Ratio of node to be moved w.r.t. total nodes: " << static_cast<double>(nodeMovement) / graph.nodes.size() << endl;
 
     return max_accuracy;
 }
