@@ -273,7 +273,7 @@ TEST_F(InitConf, EmbeddednessTest) {
     }
 }
 
-TEST_F(InitConf, Accuracy) {
+TEST_F(InitConf, AccuracyTest) {
     unordered_map<string, double> accuracy_ranking;
     accuracy_ranking.emplace("DCD", accuracy(dcd->c_ll, node_to_community_mapping, numberCommunities));
     accuracy_ranking.emplace("StreamBP", accuracy(bp->bp_graph, node_to_community_mapping, numberCommunities));

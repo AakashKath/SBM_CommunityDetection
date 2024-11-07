@@ -53,6 +53,7 @@ DynamicCommunityDetection::DynamicCommunityDetection(
 
     // Merge communities to expected number (Using Best Fit bin packing algorithm)
     // mergeCommunities(); // TODO: Disable merge algorithm
+    relabelGraph();
 }
 
 DynamicCommunityDetection::~DynamicCommunityDetection() {
@@ -337,4 +338,18 @@ double DynamicCommunityDetection::modularity_gain(const Node* node, int new_comm
     }
 
     return mod_gain;
+}
+
+void DynamicCommunityDetection::relabelGraph() {
+    unordered_map<int, int> updated_label_map;
+    int index = 0;
+    for (auto& node: c_ll.nodes) {
+        try {
+            node->label = updated_label_map.at(node->label);
+        } catch (const out_of_range& e) {
+            updated_label_map[node->label] = index;
+            node->label = index;
+            index++;
+        }
+    }
 }

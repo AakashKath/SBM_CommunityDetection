@@ -34,6 +34,7 @@ class DynamicCommunityDetection {
         void syncCommunities(pair<Node*, Node*>& involved_communities, unordered_set<Node*>& anodes);
         // void mergeCommunities();
         double modularity_gain(const Node* node, int new_community, int old_community);
+        void relabelGraph();
 
     public:
         Graph c_ll;

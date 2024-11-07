@@ -10,6 +10,7 @@
 #include <fstream>
 #include <cmath>
 #include <numeric>
+#include <algorithm>
 
 using namespace std;
 
