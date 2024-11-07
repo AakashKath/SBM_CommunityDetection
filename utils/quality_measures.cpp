@@ -81,7 +81,9 @@ double newmansModularity(const Graph& graph, bool useSplitPenality, bool useDens
                 } else {
                     d_ci_cj = static_cast<double>(destCommunityMap.second) / (communityCardinality.at(srcCommunityMap.first) * communityCardinality.at(destCommunityMap.first));
                 }
-                e_ci_cj += (destCommunityMap.second * d_ci_cj) / (2.0 * totalEdges);
+                if (srcCommunityMap.first != destCommunityMap.first) {
+                    e_ci_cj += (destCommunityMap.second * d_ci_cj) / (2.0 * totalEdges);
+                }
             }
         }
         int communitySize = communityCardinality.at(srcCommunityMap.first);
@@ -92,7 +94,7 @@ double newmansModularity(const Graph& graph, bool useSplitPenality, bool useDens
         } else {
             d_ci = (2.0 * e_in) / static_cast<double>(communitySize * (communitySize - 1));
         }
-        modularity += (e_in * d_ci / totalEdges) - pow((static_cast<double>((2.0 * e_in + e_out) * d_ci) / (2.0 * totalEdges)), 2) - e_ci_cj;
+        modularity += (static_cast<double>(e_in * d_ci) / totalEdges) - pow((static_cast<double>((2.0 * e_in + e_out) * d_ci) / (2.0 * totalEdges)), 2) - e_ci_cj;
     }
 
     return modularity;
