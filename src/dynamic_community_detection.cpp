@@ -88,12 +88,13 @@ void DynamicCommunityDetection::initialPartition(Graph& auxiliary_graph) {
             }
 
             // Find the community with highest modularity change
+            double old_mod = modularity(auxiliary_graph, totalEdges);
             for (int community: neighboring_communities) {
                 // Temp move to neighboring community
                 node->label = community;
 
                 // Check modularity gain
-                double mod_gain = modularity_gain(node, community, current_community);
+                double mod_gain = modularity(auxiliary_graph, totalEdges) - old_mod;
 
                 // Note down the best community with highest modularity change
                 if (mod_gain > 0 && mod_gain > max_mod_gain) {
@@ -140,12 +141,13 @@ vector<pair<int, int>> DynamicCommunityDetection::oneLevel(Graph& auxiliary_grap
         }
 
         // Find the community with highest modularity change
+        double old_mod = modularity(auxiliary_graph, totalEdges);
         for (int community: neighboring_communities) {
             // Temp move to neighboring community
             node->label = community;
 
             // Check modularity gain
-            double mod_gain = modularity_gain(node, community, current_community);
+                double mod_gain = modularity(auxiliary_graph, totalEdges) - old_mod;
 
             // Note down the best community with highest modularity change
             if (mod_gain > max(epsilon_gain, max_mod_gain)) {
