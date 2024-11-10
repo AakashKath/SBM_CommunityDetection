@@ -132,19 +132,14 @@ double jaccardIndex(const set<int>& set1, const set<int>& set2) {
 }
 
 // Function to compute the maximum sum of Jaccard Indices over all permutations
-double maxJaccardSum(const Graph& graph, unordered_map<int, set<int>> original_labels, ofstream& outfile) {
+double maxJaccardSum(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile) {
     double maxSum = 0.0;
-    vector<int> bestPermutation;
-
     unordered_map<int, set<int>> predicted_labels = graph.getCommunities();
 
     // Convert map values to a vector of sets
-    vector<set<int>> predicted_partition, original_partition;
+    vector<set<int>> predicted_partition;
     for (const auto& community : predicted_labels) {
         predicted_partition.push_back(community.second);
-    }
-    for (const auto& community : original_labels) {
-        original_partition.push_back(community.second);
     }
 
     // Pad with empty sets for better comparision
@@ -155,46 +150,49 @@ double maxJaccardSum(const Graph& graph, unordered_map<int, set<int>> original_l
         original_partition.push_back(set<int>());
     }
 
-    vector<int> perm(predicted_partition.size());
-    iota(perm.begin(), perm.end(), 0); // Initialize perm with indices 0, 1, ..., n-1
-
-    // Generate all permutations of indices
-    do {
-        double currentSum = 0.0;
-
-        // Calculate the sum of Jaccard Indices for this permutation
+    vector<pair<set<int>, set<int>>> jaccard_index_pairs;
+    while(!original_partition.empty()) {
+        double best_pair_score = 0.0;
+        size_t best_original_index = 0;
+        size_t best_predicted_index = 0;
+        // Find the best pair based on Jaccard index
         for (size_t i = 0; i < original_partition.size(); ++i) {
-            currentSum += jaccardIndex(original_partition[i], predicted_partition[perm[i]]);
+            for (size_t j = 0; j < predicted_partition.size(); ++j) {
+                double current_pair_score = jaccardIndex(original_partition[i], predicted_partition[j]);
+                if (current_pair_score > best_pair_score) {
+                    best_pair_score = current_pair_score;
+                    best_original_index = i;
+                    best_predicted_index = j;
+                }
+            }
         }
+        // Store the best matching pair
+        jaccard_index_pairs.emplace_back(original_partition[best_original_index], predicted_partition[best_predicted_index]);
 
-        // Update maxSum and best permutation if the current sum is larger
-        if (currentSum > maxSum) {
-            maxSum = currentSum;
-            bestPermutation = perm;
-        }
+        // Erase the matched elements from original and predicted partitions
+        original_partition.erase(original_partition.begin() + best_original_index);
+        predicted_partition.erase(predicted_partition.begin() + best_predicted_index);
+        maxSum += best_pair_score;
+    }
 
-    } while (next_permutation(perm.begin(), perm.end()));
-
-    outfile << "Best Permutation:" << endl;
-    for (size_t i = 0; i < original_partition.size(); ++i) {
-        outfile << "original_partition[" << i << "] vs predicted_partition[" << bestPermutation[i] << "] - ";
-
+    outfile << "Original Partition vs Predicted Partition" << endl;
+    for (const auto& jaccard_pair: jaccard_index_pairs) {
         // Print original_partition and matched predicted_partition set for clarity
         outfile << "{";
-        for (auto it = original_partition[i].begin(); it != original_partition[i].end(); ++it) {
-            if (it != original_partition[i].begin()) outfile << ", ";
+        for (auto it = jaccard_pair.first.begin(); it != jaccard_pair.first.end(); ++it) {
+            if (it != jaccard_pair.first.begin()) outfile << ", ";
             outfile << *it;
         }
         outfile << "} vs {";
-        for (auto it = predicted_partition[bestPermutation[i]].begin(); it != predicted_partition[bestPermutation[i]].end(); ++it) {
-            if (it != predicted_partition[bestPermutation[i]].begin()) outfile << ", ";
+        for (auto it = jaccard_pair.second.begin(); it != jaccard_pair.second.end(); ++it) {
+            if (it != jaccard_pair.second.begin()) outfile << ", ";
             outfile << *it;
         }
         outfile << "}" << endl;
     }
     outfile << endl;
 
-    return maxSum / original_partition.size();
+    return maxSum / jaccard_index_pairs.size();
 }
 
 double symmetricDifference(const Graph& graph, unordered_map<int, set<int>> original_labels) {
@@ -394,43 +392,66 @@ double embeddedness(const Graph& graph) {
     return total_embeddedness;
 }
 
-double accuracy(const Graph& graph, unordered_map<int, int> original_labels, int numberCommunities, ofstream& outfile) {
-    double max_accuracy = 0.0;
-    vector<int> bestPermutation;
-    vector<int> perm(max(static_cast<int>(numberCommunities), static_cast<int>(graph.getCommunities().size())));
-    iota(perm.begin(), perm.end(), 0); // Fill with 0, 1, 2, ..., k-1
+double accuracy(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile) {
+    int correct_count = 0;
+    unordered_map<int, set<int>> predicted_labels = graph.getCommunities();
+    // Convert map values to a vector of sets
+    vector<set<int>> predicted_partition;
+    for (const auto& community : predicted_labels) {
+        predicted_partition.push_back(community.second);
+    }
 
-    // Iterate over all permutations of the label set
-    do {
-        int correct_count = 0;
+    // Pad with empty sets for better comparision
+    while (predicted_partition.size() < original_partition.size()) {
+        predicted_partition.push_back(set<int>());
+    }
+    while (predicted_partition.size() > original_partition.size()) {
+        original_partition.push_back(set<int>());
+    }
 
-        // Loop over all vertices
-        for (const auto& node: graph.nodes) {
-            int estimated_label = perm[node->label]; // Get the permuted expected label
-            int true_label = original_labels.at(node->id); // Get the true label
+    vector<pair<set<int>, set<int>>> accurate_pairs;
+    while(!original_partition.empty()) {
+        int max_common_count = 0;
+        size_t best_original_index = 0;
+        size_t best_predicted_index = 0;
 
-            if (estimated_label == true_label) {
-                correct_count++; // Count correct matches
+        // Find the best pair based on accuracy
+        for (size_t i = 0; i < original_partition.size(); ++i) {
+            for (size_t j = 0; j < predicted_partition.size(); ++j) {
+                vector<int> intersection;
+                set_intersection(
+                    original_partition[i].begin(), original_partition[i].end(),
+                    predicted_partition[j].begin(), predicted_partition[j].end(),
+                    back_inserter(intersection)
+                );
+                if (intersection.size() > max_common_count) {
+                    max_common_count = intersection.size();
+                    best_original_index = i;
+                    best_predicted_index = j;
+                }
             }
         }
+        // Store the best matching pair
+        accurate_pairs.emplace_back(original_partition[best_original_index], predicted_partition[best_predicted_index]);
 
-        // Compute accuracy for this permutation
-        double accuracy = static_cast<double>(correct_count) / graph.nodes.size();
-        if (accuracy > max_accuracy) {
-            max_accuracy = accuracy; // Keep track of the best accuracy
-            bestPermutation = perm;
-        }
-
-    } while (next_permutation(perm.begin(), perm.end())); // Generate next permutation
-
-    int nodeMovement = 0;
-    for (const auto& node: graph.nodes) {
-        if (bestPermutation[node->label] != original_labels.at(node->id)) {
-            nodeMovement++;
-        }
+        // Erase the matched elements from original and predicted partitions
+        original_partition.erase(original_partition.begin() + best_original_index);
+        predicted_partition.erase(predicted_partition.begin() + best_predicted_index);
+        correct_count += max_common_count;
     }
-    outfile << "Number of node to be moved: " << nodeMovement << endl;
-    outfile << "Ratio of node to be moved w.r.t. total nodes: " << static_cast<double>(nodeMovement) / graph.nodes.size() << endl;
 
-    return max_accuracy;
+    int node_movement = 0;
+    for (const auto& acc_pair: accurate_pairs) {
+        vector<int> difference;
+        set_difference(
+            acc_pair.first.begin(), acc_pair.first.end(),
+            acc_pair.second.begin(), acc_pair.second.end(),
+            back_inserter(difference)
+        );
+        node_movement += difference.size();
+    }
+    outfile << "Number of node to be moved: " << node_movement << endl;
+    outfile << "Ratio of node to be moved w.r.t. total nodes: " << static_cast<double>(node_movement) / graph.nodes.size() << endl;
+
+    return static_cast<double>(correct_count) / graph.nodes.size();
 }

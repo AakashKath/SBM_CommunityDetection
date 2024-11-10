@@ -25,7 +25,7 @@ class InitConf : public ::testing::Test {
         static double interCommunityEdgeProbability;
         static double intraCommunityEdgeProbability;
         static Graph original_graph;
-        static int numberCommunities;
+        static vector<set<int>> community_partition;
 
         static void SetUpTestSuite() {
             vector<tuple<string, double, long>> memory_ranking;
@@ -37,11 +37,14 @@ class InitConf : public ::testing::Test {
 
             intraCommunityEdgeProbability = gs.sbm.intraCommunityEdgeProbability;
             interCommunityEdgeProbability = gs.sbm.interCommunityEdgeProbability;
-            numberCommunities = gs.sbm.numberCommunities;
             original_graph = gs.sbm.sbm_graph;
 
             node_to_community_mapping = gs.sbm.sbm_graph.getLabels();
             community_to_node_mapping = gs.sbm.sbm_graph.getCommunities();
+            // Create community partition
+            for (const auto& community : community_to_node_mapping) {
+                community_partition.push_back(community.second);
+            }
 
             // Run all the algorithms
             if (!get_cpu_times(start_idle_time, start_total_time)) {
@@ -171,7 +174,7 @@ unordered_map<int, int> InitConf::node_to_community_mapping;
 double InitConf::interCommunityEdgeProbability;
 double InitConf::intraCommunityEdgeProbability;
 Graph InitConf::original_graph = Graph(0);
-int InitConf::numberCommunities;
+vector<set<int>> InitConf::community_partition;
 
 // Measures the strength of the division of a network into communities by comparing the density of edges inside
 // communities with the density expected if edges were distributed randomly.
@@ -276,8 +279,8 @@ TEST_F(InitConf, EmbeddednessTest) {
 // Also called MoveTest, determines minimum number of nodes that needs to moved to different community to get same partition
 TEST_F(InitConf, AccuracyTest) {
     unordered_map<string, double> accuracy_ranking;
-    accuracy_ranking.emplace("DCD", accuracy(dcd->c_ll, node_to_community_mapping, numberCommunities, outfile));
-    accuracy_ranking.emplace("StreamBP", accuracy(bp->bp_graph, node_to_community_mapping, numberCommunities, outfile));
+    accuracy_ranking.emplace("DCD", accuracy(dcd->c_ll, community_partition, outfile));
+    accuracy_ranking.emplace("StreamBP", accuracy(bp->bp_graph, community_partition, outfile));
 
     EXPECT_GT(accuracy_ranking.size(), 0);
     for (const auto& rank: accuracy_ranking) {
@@ -296,8 +299,8 @@ TEST_F(InitConf, AccuracyTest) {
 // It compares the ratio of intersection and union
 TEST_F(InitConf, JaccardSumTest) {
     unordered_map<string, double> jaccard_sum;
-    jaccard_sum.emplace("DCD", maxJaccardSum(dcd->c_ll, community_to_node_mapping, outfile));
-    jaccard_sum.emplace("StreamBP", maxJaccardSum(bp->bp_graph, community_to_node_mapping, outfile));
+    jaccard_sum.emplace("DCD", maxJaccardSum(dcd->c_ll, community_partition, outfile));
+    jaccard_sum.emplace("StreamBP", maxJaccardSum(bp->bp_graph, community_partition, outfile));
 
     EXPECT_GT(jaccard_sum.size(), 0);
     for (const auto& rank: jaccard_sum) {
