@@ -20,7 +20,6 @@ Sbm::Sbm(int numberNodes, int numberCommunities, double intraCommunityEdgeProbab
     double intraCommunityWeight = chooseNodesFromSameCommunity * intraCommunityEdgeProbability;
     double interCommunityWeight = (1.0 / ((numberNodes + 1) * betal(numberNodes - 1, 3)) - chooseNodesFromSameCommunity) * interCommunityEdgeProbability;
     communityBoundaryThreshold = intraCommunityWeight / (interCommunityWeight + intraCommunityWeight);
-    generateDistributions();
 }
 
 Sbm::~Sbm() {
@@ -53,14 +52,6 @@ Sbm& Sbm::operator=(Sbm&& other) noexcept {
     return *this;
 }
 
-void Sbm::generateDistributions() {
-    edgeDeciderDistribution = uniform_real_distribution<double>(0.0, 1.0);
-    intraCommunityDistribution = uniform_int_distribution<int>(0, numberCommunities - 1);
-    intraNodeDistribution = uniform_int_distribution<int>(0, numberNodes / numberCommunities - 1);
-    interCommunityDistribution = uniform_int_distribution<int>(0, numberCommunities - 1);
-    interNodeDistribution = uniform_int_distribution<int>(0, numberNodes / numberCommunities - 1);
-}
-
 pair<int, int> Sbm::generateEdge() {
     if (isIntraCommunityEdge()) {
         return generateIntraCommunityEdge();
@@ -70,16 +61,18 @@ pair<int, int> Sbm::generateEdge() {
 
 pair<int, int> Sbm::generateInterCommunityEdge() {
     // Create a uniform distribution between communities
-    int community1 = interCommunityDistribution(gen);
+    uniform_int_distribution<int> communityDistribution(0, numberCommunities - 1);
+    int community1 = communityDistribution(gen);
     int community2;
 
     do {
-        community2 = interCommunityDistribution(gen);
+        community2 = communityDistribution(gen);
     } while(community1 == community2);
 
     // Create a uniform distribution between node blocks
-    int offset1 = interNodeDistribution(gen);
-    int offset2 = interNodeDistribution(gen);
+    uniform_int_distribution<int> nodeDistribution(0, numberNodes / numberCommunities - 1);
+    int offset1 = nodeDistribution(gen);
+    int offset2 = nodeDistribution(gen);
 
     // Return node pair
     return make_pair(communityTracker[community1][offset1], communityTracker[community2][offset2]);
@@ -87,22 +80,27 @@ pair<int, int> Sbm::generateInterCommunityEdge() {
 
 pair<int, int> Sbm::generateIntraCommunityEdge() {
     // Create a uniform distribution between communities
-    int community = intraCommunityDistribution(gen);
+    uniform_int_distribution<int> communityDistribution(0, numberCommunities - 1);
+    int community = communityDistribution(gen);
 
     // Create a uniform distribution between node blocks
-    int offset1 = intraNodeDistribution(gen);
+    uniform_int_distribution<int> nodeDistribution(0, numberNodes / numberCommunities - 1);
+    int offset1 = nodeDistribution(gen);
     int offset2;
     do {
-        offset2 = intraNodeDistribution(gen);
+        offset2 = nodeDistribution(gen);
     } while(offset1 == offset2);
 
     return make_pair(communityTracker[community][offset1], communityTracker[community][offset2]);
 }
 
 bool Sbm::isIntraCommunityEdge() {
+    // Create a uniform distribution in the range [0.0, 1.0)
+    uniform_real_distribution<double> dis(0.0, 1.0);
+
     // TODO: Using the probability directly, see if communityBoundaryThreshold can be used
     // Return true for intra community edge, and false for inter community edge
-    return edgeDeciderDistribution(gen) < intraCommunityEdgeProbability;
+    return dis(gen) < intraCommunityEdgeProbability;
 }
 
 Graph Sbm::generateSbm() {

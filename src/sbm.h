@@ -15,14 +15,11 @@ class Sbm {
         double communityBoundaryThreshold;
         vector<vector<int>> communityTracker;
         mt19937 gen;
-        uniform_int_distribution<int> intraCommunityDistribution, intraNodeDistribution, interCommunityDistribution, interNodeDistribution;
-        uniform_real_distribution<double> edgeDeciderDistribution;
 
         Graph generateSbm();
         bool isIntraCommunityEdge();
         pair<int, int> generateIntraCommunityEdge();
         pair<int, int> generateInterCommunityEdge();
-        void generateDistributions();
 
     public:
         Sbm(int numberNodes, int numberCommunities, double intraCommunityEdgeProbability, double interCommunityEdgeProbability);
