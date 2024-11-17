@@ -3,15 +3,21 @@
 #include <algorithm>
 #include <unordered_set>
 
-Sbm::Sbm(int numberNodes, int numberCommunities, double intraCommunityEdgeProbability, double interCommunityEdgeProbability):
-    numberNodes(numberNodes), numberCommunities(numberCommunities), intraCommunityEdgeProbability(intraCommunityEdgeProbability),
-    interCommunityEdgeProbability(interCommunityEdgeProbability), sbm_graph(numberNodes),
-    communityTracker(numberCommunities, vector<int>(numberNodes/numberCommunities, -1)) {
-
-    // Create a random number generator
-    random_device rd;
-    mt19937 gen(rd());
-
+Sbm::Sbm(
+    int numberNodes,
+    int numberCommunities,
+    double intraCommunityEdgeProbability,
+    double interCommunityEdgeProbability
+):
+    numberNodes(numberNodes),
+    numberCommunities(numberCommunities),
+    intraCommunityEdgeProbability(intraCommunityEdgeProbability),
+    interCommunityEdgeProbability(interCommunityEdgeProbability),
+    sbm_graph(numberNodes),
+    communityTracker(numberCommunities,
+    vector<int>(numberNodes/numberCommunities, -1)),
+    gen(random_device{}())
+{
     // Generate graph with no edges
     sbm_graph = generateSbm();
 
