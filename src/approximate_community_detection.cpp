@@ -22,7 +22,7 @@ ApproximateCommunityDetection::ApproximateCommunityDetection(
     double mod = newmansModularity(acd_graph, totalEdges);
     do {
         vector<int> randomised_communities(communityCount - 1);
-        iota(randomised_communities.begin(), randomised_communities.end(), 0); // Fill with 0, 1, ..., 10
+        iota(randomised_communities.begin(), randomised_communities.end(), 0); // Fill with 0, 1, ..., communityCount - 1
         shuffle(randomised_communities.begin(), randomised_communities.end(), gen);
         for (const auto& community_label: randomised_communities) {
             if (nodeSwapAllowed(community_label)) {
