@@ -40,6 +40,37 @@ double modularity(const Graph& graph, int totalEdges) {
     return q / (2.0 * totalEdges);
 }
 
+double newmansModularity_(const Graph& graph) {
+    double modularity = 0.0;
+    int totalEdges = 0;
+    unordered_map<int, int> e_in{};
+    unordered_map<int, int> e_out{};
+    set<int> communities{};
+
+    for (const auto& srcNode: graph.nodes) {
+        for (const auto& edge: srcNode->edgeList) {
+            if (srcNode->label == edge.first->label) {
+                e_in[srcNode->label] += edge.second;
+            } else {
+                e_out[srcNode->label] += edge.second;
+            }
+            totalEdges += edge.second;
+        }
+        communities.emplace(srcNode->label);
+    }
+    totalEdges /= 2;
+
+    for (auto& mem: e_in) {
+        mem.second /= 2;
+    }
+
+    for (const auto& comm: communities) {
+        modularity += static_cast<double>(e_in.at(comm)) / totalEdges - pow(static_cast<double>(2.0 * e_in.at(comm) + e_out.at(comm)) / (2.0 * totalEdges), 2);
+    }
+
+    return modularity;
+}
+
 double newmansModularity(const Graph& graph, bool useSplitPenality, bool useDensity) {
     double modularity = 0.0;
     int totalEdges = 0;

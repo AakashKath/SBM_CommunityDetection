@@ -24,6 +24,7 @@ double embeddedness(const Graph& graph);
 bool get_cpu_times(size_t &idle_time, size_t &total_time);
 vector<size_t> get_cpu_times();
 double accuracy(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile);
+double newmansModularity_(const Graph& graph);
 double newmansModularity(const Graph& graph, bool useSplitPenality = false, bool useDensity = false);
 double maxJaccardSum(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile);
 
