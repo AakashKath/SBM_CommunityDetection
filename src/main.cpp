@@ -2,6 +2,7 @@
 #include "utils/sequence_generator.h"
 #include "dynamic_community_detection.h"
 #include "belief_propagation.h"
+#include "approximate_community_detection.h"
 
 using namespace std;
 
@@ -61,6 +62,13 @@ int main(int argc, char* argv[]) {
             cout << "Node: " << label.first << " Community: " << label.second << endl;
         }
         bp.bp_graph.draw("predicted_graph.png");
+    } else if (gs.algorithm_number == 3) {
+        ApproximateCommunityDetection acd(gs.sbm.sbm_graph, gs.sbm.numberCommunities, gs.addedEdges, gs.removedEdges);
+        unordered_map<int, int> predicted_labels = acd.acd_graph.getLabels();
+        for (const auto& label: predicted_labels) {
+            cout << "Node: " << label.first << " Community: " << label.second << endl;
+        }
+        acd.acd_graph.draw("predicted_graph.png");
     }
 
     return 0;
