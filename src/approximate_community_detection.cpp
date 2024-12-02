@@ -56,7 +56,6 @@ void ApproximateCommunityDetection::initialPartition() {
             Node* node = acd_graph.getNode(num);
             node->label = i;
             node->offset = j;
-            cout << "ID: " << num << " Label: " << i << endl;
         }
     }
 }
