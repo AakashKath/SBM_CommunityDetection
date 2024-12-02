@@ -10,6 +10,10 @@ Community::~Community() {
 }
 
 double newmansModularity(unordered_map<int, Community> communities, int total_edges) {
+    if (total_edges == 0) {
+        return 0.0;
+    }
+
     double modularity = 0.0;
     for (const auto& pair: communities) {
         modularity += modularityContributionByCommunity(pair.second, total_edges);
@@ -35,6 +39,9 @@ double newmansModularity(const Graph& graph) {
             totalEdges += edge.second;
         }
         communities.emplace(srcNode->label);
+    }
+    if (totalEdges == 0) {
+        return 0.0;
     }
     totalEdges /= 2;
 
@@ -82,6 +89,9 @@ double newmansModularity_(const Graph& graph, bool useSplitPenality, bool useDen
             totalEdges += edge.second;
         }
         communityCardinality[srcNode->label]++;
+    }
+    if (totalEdges == 0) {
+        return 0.0;
     }
     totalEdges /= 2;
 

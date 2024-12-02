@@ -20,8 +20,13 @@ class ApproximateCommunityDetection {
 
         void initialPartition();
         void createCommunities();
+        void moveNodesForBestModularity();
         void swapNodes(int community_label);
         bool nodeSwapAllowed(int community_label);
+        pair<Node*, Node*> addEdge(int srcId, int destId);
+        void updateHeapAndMap(Node* node);
+        void swapNodesIfPossible(int community_label);
+        void repopulateHeapAndMap(Community& comm, int community_label);
 
     public:
         Graph acd_graph;

@@ -84,7 +84,7 @@ void HeapAndMap::insertElement(int elementId, double value) {
 
 void HeapAndMap::deleteElement(int elementId) {
     if (id_index_map.find(elementId) == id_index_map.end()) {
-        cerr << "Element not found. Please re-check the community to be deleted from.";
+        cerr << "Element not found. Please re-check the community to be deleted from." << endl;
         return;
     }
 
@@ -102,7 +102,8 @@ void HeapAndMap::popElement() {
 
 int HeapAndMap::getMaxElementId() {
     if (heapSize == 0) {
-        throw runtime_error("Heap empty");
+        cerr << "Heap empty" << endl;
+        return -1;
     }
 
     return heapArray[0].first;
