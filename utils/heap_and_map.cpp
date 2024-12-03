@@ -6,7 +6,7 @@ HeapAndMap::HeapAndMap(): heapArray(), heapSize(0) {
 }
 
 void HeapAndMap::populateHeapAndMap(vector<pair<int, double>> array) {
-    heapArray = array;
+    heapArray = move(array);
     heapSize = heapArray.size();
     createMap();
     buildHeap();
@@ -17,6 +17,7 @@ HeapAndMap::~HeapAndMap() {
 }
 
 void HeapAndMap::createMap() {
+    id_index_map.clear();
     for (int i = 0; i < heapSize; ++i) {
         id_index_map[heapArray[i].first] = i;
     }
@@ -29,6 +30,12 @@ void HeapAndMap::buildHeap() {
 }
 
 void HeapAndMap::swapAndUpdate(int i, int j) {
+    // Validate indices
+    if (i < 0 || i >= heapSize || j < 0 || j >= heapSize) {
+        cerr << "swapAndUpdate: Index out of bounds (" << i << ", " << j << ")" << endl;
+        return;
+    }
+
     // Swap elements in the heap
     swap(heapArray[i], heapArray[j]);
 
@@ -38,6 +45,12 @@ void HeapAndMap::swapAndUpdate(int i, int j) {
 }
 
 void HeapAndMap::heapifyDown(int index) {
+    // Validate index
+    if (index < 0 || index >= heapSize) {
+        cerr << "heapifyDown: Index out of bounds (" << index << ")" << endl;
+        return;
+    }
+
     int largest = index;
     int left_child = 2 * index + 1;
     int right_child = 2 * index + 2;
@@ -57,8 +70,8 @@ void HeapAndMap::heapifyDown(int index) {
 }
 
 void HeapAndMap::heapifyUp(int index) {
-    // Base case reached.
-    if (index == 0) {
+    // Base case or invalid index
+    if (index <= 0 || index >= heapSize) {
         return;
     }
 
@@ -70,6 +83,12 @@ void HeapAndMap::heapifyUp(int index) {
 }
 
 void HeapAndMap::insertElement(int elementId, double value) {
+    // Validate if element already exists
+    if (id_index_map.find(elementId) != id_index_map.end()) {
+        cerr << "insertElement: Element already exists with ID " << elementId << endl;
+        return;
+    }
+
     // Add the new element at the end of the array
     heapArray.emplace_back(elementId, value);
     heapSize++;
@@ -83,17 +102,18 @@ void HeapAndMap::insertElement(int elementId, double value) {
 }
 
 void HeapAndMap::deleteElement(int elementId) {
-    if (id_index_map.find(elementId) == id_index_map.end()) {
-        cerr << "Element not found. Please re-check the community to be deleted from." << endl;
+    auto it = id_index_map.find(elementId);
+    if (it == id_index_map.end()) {
+        cerr << "deleteElement: Element not found with ID " << elementId << endl;
         return;
     }
 
-    deleteElementByIndex(id_index_map[elementId]);
+    deleteElementByIndex(it->second);
 }
 
 void HeapAndMap::popElement() {
     if (heapSize == 0) {
-        cerr << "Heap already empty. See the reason of pop call." << endl;
+        cerr << "popElement: Heap is empty." << endl;
         return;
     }
 
@@ -110,6 +130,12 @@ int HeapAndMap::getMaxElementId() {
 }
 
 void HeapAndMap::deleteElementByIndex(int index) {
+    // Validate index
+    if (index < 0 || index >= heapSize) {
+        cerr << "deleteElementByIndex: Index out of bounds (" << index << ")" << endl;
+        return;
+    }
+
     // Replace the element at the index with the last element
     swapAndUpdate(index, heapSize - 1);
 
@@ -119,7 +145,9 @@ void HeapAndMap::deleteElementByIndex(int index) {
     heapSize--;
 
     // Heapify-down from the index to maintain max-heap property
-    heapifyDown(index);
+    if (index < heapSize) {
+        heapifyDown(index);
+    }
 }
 
 void HeapAndMap::printInfo() {

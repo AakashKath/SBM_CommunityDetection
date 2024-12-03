@@ -26,7 +26,9 @@ ApproximateCommunityDetection::ApproximateCommunityDetection(
         auto [src, dest] = addEdge(srcId, destId);
 
         swapNodesIfPossible(src->label);
-        swapNodesIfPossible(dest->label);
+        if (src->label != dest->label) {
+            swapNodesIfPossible(dest->label);
+        }
     }
 
     moveNodesForBestModularity();
@@ -182,10 +184,10 @@ void ApproximateCommunityDetection::updateHeapAndMap(Node* node) {
     }
 
     // Update current community
-    Community& comm = communities.at(node->label);
-    comm.nodes_to_be_removed.deleteElement(node->id);
+    Community& current_comm = communities.at(node->label);
+    current_comm.nodes_to_be_removed.deleteElement(node->id);
     if (outgoing_edge_weight > 0) {
-        comm.nodes_to_be_removed.insertElement(node->id, static_cast<double>(outgoing_edge_weight) / degree);
+        current_comm.nodes_to_be_removed.insertElement(node->id, static_cast<double>(outgoing_edge_weight) / degree);
     }
 
     // Update neighboring communities

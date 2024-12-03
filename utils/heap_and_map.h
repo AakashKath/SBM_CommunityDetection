@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <vector>
-#include <map>
+#include <unordered_map>
 
 using namespace std;
 
@@ -11,7 +11,7 @@ class HeapAndMap {
     private:
         int heapSize;
         vector<pair<int, double>> heapArray;
-        map<int, int> id_index_map;
+        unordered_map<int, int> id_index_map;
 
         void createMap();
         void buildHeap();
