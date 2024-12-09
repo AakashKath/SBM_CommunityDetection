@@ -104,9 +104,8 @@ bool Sbm::isIntraCommunityEdge() {
     // Create a uniform distribution in the range [0.0, 1.0)
     uniform_real_distribution<double> dis(0.0, 1.0);
 
-    // TODO: Using the probability directly, see if communityBoundaryThreshold can be used
     // Return true for intra community edge, and false for inter community edge
-    return dis(gen) < intraCommunityEdgeProbability;
+    return dis(gen) < communityBoundaryThreshold;
 }
 
 Graph Sbm::generateSbm() {
