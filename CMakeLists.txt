@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.18)
 
 # Project name
 project(SBM_CommunityDetection VERSION 0.1.0 LANGUAGES C CXX)
 
 # Set C++ standard
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Define library name
@@ -20,8 +20,12 @@ set(TEST_NAME
 # List all submodules
 set(SUBMODULES
     "json"
-    "googletest"
+    # "googletest"
+    "ortools"
 )
+
+# Enable building dependencies like Abseil and Protobuf automatically
+set(BUILD_DEPS ON CACHE BOOL "Build dependencies automatically")
 
 find_package(Git QUIET)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
@@ -71,15 +75,16 @@ include_directories(${GRAPHVIZ_INCLUDE_DIRS})
 
 # Add external libraries
 add_subdirectory(lib/json)
-add_subdirectory(lib/googletest)
+# add_subdirectory(lib/googletest)
+add_subdirectory(lib/ortools)
 
 # Add executable target with source files
 add_executable(${LIBRARY_NAME} src/main.cpp ${COMMON_SOURCES})
 add_executable(${TEST_NAME} ${TEST_SOURCES} ${COMMON_SOURCES})
 
 # Link Graphviz libraries to your executable
-target_link_libraries(${LIBRARY_NAME} ${GRAPHVIZ_LIBRARIES})
-target_link_libraries(${TEST_NAME} gtest gtest_main ${GRAPHVIZ_LIBRARIES})
+target_link_libraries(${LIBRARY_NAME} ortools::ortools ${GRAPHVIZ_LIBRARIES})
+target_link_libraries(${TEST_NAME} ortools::ortools gtest gtest_main ${GRAPHVIZ_LIBRARIES})
 
 # Include directories for the library
 set(COMMON_INCLUDED_DIRECTORIES
@@ -91,6 +96,7 @@ set(COMMON_INCLUDED_DIRECTORIES
     $<INSTALL_INTERFACE:/include/StreamBP>
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/json/single_include
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/ortools
 )
 
 # Include common libraries listed above
@@ -104,7 +110,7 @@ target_include_directories(${LIBRARY_NAME} PUBLIC
 )
 
 # Include googletest library
-target_include_directories(${TEST_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/googletest/googletest/include)
+# target_include_directories(${TEST_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/googletest/googletest/include)
 
 # Set up testing
 enable_testing()

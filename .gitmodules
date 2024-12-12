@@ -4,3 +4,6 @@
 [submodule "lib/json"]
 	path = lib/json
 	url = https://github.com/nlohmann/json.git
+[submodule "lib/ortools"]
+	path = lib/ortools
+	url = https://github.com/google/or-tools.git
