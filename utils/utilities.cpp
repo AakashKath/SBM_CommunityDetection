@@ -139,3 +139,98 @@ double newmansModularity_(const Graph& graph, bool useSplitPenality, bool useDen
 
     return modularity;
 }
+
+void solve_ilp(const Graph& graph) {
+    // Create the solver
+    unique_ptr<MPSolver> solver(MPSolver::CreateSolver("CBC"));
+    if (!solver) {
+        cerr << "Solver not available." << endl;
+        return;
+    }
+
+    // Decision variables Xuv
+    unordered_map<pair<int, int>, MPVariable*, pair_hash> Xuv;
+    for (const auto& node1: graph.nodes) {
+        for (const auto& node2: graph.nodes) {
+            Xuv[make_pair(node1->id, node2->id)] = solver->MakeIntVar(0.0, 1.0, "X_" + to_string(node1->id) + "_" + to_string(node2->id));
+        }
+    }
+
+    // Constraints: Reflexivity
+    for (const auto& node: graph.nodes) {
+        solver->MakeRowConstraint(1.0, 1.0)->SetCoefficient(Xuv[make_pair(node->id, node->id)], 1.0);
+    }
+
+    // Constraints: Symmetry
+    for (const auto& node1: graph.nodes) {
+        for (const auto& node2: graph.nodes) {
+            auto constraint = solver->MakeRowConstraint(0.0, 0.0);
+            constraint->SetCoefficient(Xuv[make_pair(node1->id, node2->id)], 1.0);
+            constraint->SetCoefficient(Xuv[make_pair(node2->id, node1->id)], -1.0);
+        }
+    }
+
+    // Constraints: Transitivity
+    for (const auto& node1: graph.nodes) {
+        for (const auto& node2: graph.nodes) {
+            for (const auto& node3: graph.nodes) {
+                auto constraint = solver->MakeRowConstraint(0.0, 1.0);
+                constraint->SetCoefficient(Xuv[make_pair(node1->id, node2->id)], 1.0);
+                constraint->SetCoefficient(Xuv[make_pair(node2->id, node3->id)], 1.0);
+                constraint->SetCoefficient(Xuv[make_pair(node1->id, node3->id)], -2.0);
+            }
+        }
+    }
+
+    double m = static_cast<double>(graph.getTotalEdges());
+
+    unordered_map<int, int> degrees{};
+
+    // Degree counts weight on edge as well
+    for (const auto& node: graph.nodes) {
+        int degreeWeight = 0;
+        for (const auto& edge: node->edgeList) {
+            degreeWeight += edge.second;
+        }
+        degrees.emplace(node->id, degreeWeight);
+    }
+
+    // Define the objective: Maximize the total weight of selected vertices
+    MPObjective* const objective = solver->MutableObjective();
+    for (const auto& node1: graph.nodes) {
+        for (const auto& node2: graph.nodes) {
+            // Skip self-pairs
+            if (node1->id == node2->id) {
+                continue;
+            }
+            double edge_weight = 0.0;
+            for (const auto& edge: node1->edgeList) {
+                if (edge.first->id == node2->id) {
+                    edge_weight = edge.second;
+                    break;
+                }
+            }
+            double degree_product = degrees[node1->id] * degrees[node2->id] / (2.0 * m);
+            objective->SetCoefficient(Xuv[make_pair(node1->id, node2->id)], (1 / 2.0 * m) * (edge_weight - degree_product));
+        }
+    }
+    objective->SetMaximization();
+
+    // Solve the ILP
+    const MPSolver::ResultStatus result_status = solver->Solve();
+
+    // Output the results
+    if (result_status == MPSolver::OPTIMAL) {
+        cout << "Optimal solution found!" << endl;
+        for (const auto& node1: graph.nodes) {
+            for (const auto& node2: graph.nodes) {
+                if (Xuv[make_pair(node1->id, node2->id)]->solution_value() == 1.0) {
+                    cout << "Node: " << node1->id << " and " << node2->id << " are in the same cluster." << endl;
+                }
+            }
+        }
+        cout << "Maximum modularity: " << objective->Value() << endl;
+    } else {
+        cout << "No optimal solution found." << endl;
+    }
+}

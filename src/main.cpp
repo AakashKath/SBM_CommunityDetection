@@ -3,10 +3,8 @@
 #include "dynamic_community_detection.h"
 #include "belief_propagation.h"
 #include "approximate_community_detection.h"
-#include "ortools/linear_solver/linear_solver.h"
 
 using namespace std;
-using namespace operations_research;
 
 
 // Function to display the help message
@@ -40,52 +38,37 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Example graph as an adjacency list
-    // Node format: {node_id: (weight, [neighbors])}
-    std::unordered_map<int, std::pair<int, std::vector<int>>> graph = {
-        {0, {5, {1, 2}}},
-        {1, {3, {0, 2}}},
-        {2, {4, {0, 1, 3}}},
-        {3, {2, {2}}}
-    };
+    generated_sequence gs = generateSequence(filename);
 
-    // Create the solver
-    MPSolver solver("Graph_ILP", MPSolver::CBC_MIXED_INTEGER_PROGRAMMING);
-
-    // Create variables dynamically
-    std::unordered_map<int, MPVariable*> variables;
-    for (const auto& [node, data] : graph) {
-        variables[node] = solver.MakeIntVar(0.0, 1.0, "x" + std::to_string(node));
-    }
-
-    // Add constraints: No two adjacent vertices can be selected simultaneously
-    for (const auto& [node, data] : graph) {
-        for (int neighbor : data.second) {
-            MPConstraint* const constraint = solver.MakeRowConstraint(0.0, 1.0);
-            constraint->SetCoefficient(variables[node], 1);
-            constraint->SetCoefficient(variables[neighbor], 1);
+    if (gs.algorithm_number == 1) {
+        DynamicCommunityDetection dcd(gs.sbm.sbm_graph, gs.sbm.numberCommunities, gs.addedEdges, gs.removedEdges);
+        unordered_map<int, int> predicted_labels = dcd.c_ll.getLabels();
+        for (const auto& label: predicted_labels) {
+            cout << "Node: " << label.first << " Community: " << label.second << endl;
         }
-    }
-
-    // Define the objective: Maximize the total weight of selected vertices
-    MPObjective* const objective = solver.MutableObjective();
-    for (const auto& [node, data] : graph) {
-        objective->SetCoefficient(variables[node], data.first);
-    }
-    objective->SetMaximization();
-
-    // Solve the problem
-    const MPSolver::ResultStatus result_status = solver.Solve();
-
-    // Output the results
-    if (result_status == MPSolver::OPTIMAL) {
-        std::cout << "Optimal solution found!" << std::endl;
-        for (const auto& [node, var] : variables) {
-            std::cout << "Node " << node << ": " << var->solution_value() << std::endl;
+        dcd.c_ll.draw("predicted_graph.png");
+    } else if (gs.algorithm_number == 2) {
+        BeliefPropagation bp(
+            gs.sbm.sbm_graph,
+            gs.sbm.numberCommunities,
+            gs.radius,
+            gs.sbm.intraCommunityEdgeProbability,
+            gs.sbm.interCommunityEdgeProbability,
+            gs.addedEdges,
+            gs.removedEdges
+        );
+        unordered_map<int, int> predicted_labels = bp.bp_graph.getLabels();
+        for (const auto& label: predicted_labels) {
+            cout << "Node: " << label.first << " Community: " << label.second << endl;
         }
-        std::cout << "Maximum weight: " << objective->Value() << std::endl;
-    } else {
-        std::cout << "No optimal solution found." << std::endl;
+        bp.bp_graph.draw("predicted_graph.png");
+    } else if (gs.algorithm_number == 3) {
+        ApproximateCommunityDetection acd(gs.sbm.sbm_graph, gs.sbm.numberCommunities, gs.addedEdges, gs.removedEdges);
+        unordered_map<int, int> predicted_labels = acd.acd_graph.getLabels();
+        for (const auto& label: predicted_labels) {
+            cout << "Node: " << label.first << " Community: " << label.second << endl;
+        }
+        acd.acd_graph.draw("predicted_graph.png");
     }
 
     return 0;
