@@ -5,7 +5,7 @@
 #include <graphviz/gvc.h>
 #include <map>
 
-Node::Node(int id, int label): id(id), label(label), offset(-1), edgeList{}, messages{} {}
+Node::Node(int id, int label): id(id), label(label), offset(-1), edgeList{}, messages{}, degree(0) {}
 
 Node::~Node() {
     // Nothing to clean
@@ -26,6 +26,7 @@ void Node::addEdge(Node* destination, int edgeWeight) {
     } else {
         edgeList.emplace_back(destination, edgeWeight);
     }
+    degree += edgeWeight;
 }
 
 // Constructor to initialize graph with a certain number of nodes
@@ -262,6 +263,7 @@ void Graph::removeEdge(int srcNodeId, int destNodeId) {
                 });
 
     if (it != src->edgeList.end()) {
+        src->degree -= it->second;
         src->edgeList.erase(it);
     }
 }

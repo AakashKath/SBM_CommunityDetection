@@ -18,15 +18,12 @@ class ApproximateCommunityDetection {
         int totalEdges;
         mt19937 gen;
 
-        void initialPartition();
+        void initializePartition();
         void createCommunities();
-        void moveNodesForBestModularity();
-        void swapNodes(int community_label);
-        bool nodeSwapAllowed(int community_label);
-        pair<Node*, Node*> addEdge(int srcId, int destId);
-        void updateHeapAndMap(Node* node);
-        void swapNodesIfPossible(int community_label);
-        void repopulateHeapAndMap(Community& comm, int community_label);
+        pair<Community&, Community&> addEdge(int srcId, int destId);
+        void createHeapAndMap(Community& current_comm, Community& involved_comm);
+        double run2FMAlgorithm(Community& comm1, Community& comm2);
+        void updateCommunity(Community& comm, unordered_set<Node*> updated_comm_node_list);
 
     public:
         Graph acd_graph;

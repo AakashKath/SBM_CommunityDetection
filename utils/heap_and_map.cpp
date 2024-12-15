@@ -120,9 +120,28 @@ void HeapAndMap::popElement() {
     deleteElementByIndex(0);
 }
 
+double HeapAndMap::getMaxValue() {
+    if (heapSize == 0) {
+        cerr << "getMaxValue: Heap empty" << endl;
+        return -1;
+    }
+
+    return heapArray[0].second;
+}
+
+double HeapAndMap::getValue(int elementId) {
+    auto it = id_index_map.find(elementId);
+    if (it == id_index_map.end()) {
+        cerr << "getValue: Element not found with ID " << elementId << endl;
+        return -1;
+    }
+
+    return heapArray[it->second].second;
+}
+
 int HeapAndMap::getMaxElementId() {
     if (heapSize == 0) {
-        cerr << "Heap empty" << endl;
+        cerr << "getMaxElementId: Heap empty" << endl;
         return -1;
     }
 
@@ -160,4 +179,8 @@ void HeapAndMap::printInfo() {
     for (const auto& pair: id_index_map) {
         cout << "ID: " << pair.first << " Index: " << pair.second << endl;
     }
+}
+
+bool HeapAndMap::isEmpty() {
+    return heapSize == 0;
 }

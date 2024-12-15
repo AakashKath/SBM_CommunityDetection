@@ -1,7 +1,7 @@
 #include "utilities.h"
 
 
-Community::Community() {
+Community::Community(): id(-1) {
     // Nothing to add
 }
 

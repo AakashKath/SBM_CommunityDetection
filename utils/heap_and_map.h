@@ -30,6 +30,9 @@ class HeapAndMap {
         void popElement();
         int getMaxElementId();
         void printInfo();
+        bool isEmpty();
+        double getMaxValue();
+        double getValue(int elementId);
 };
 
 #endif // HEAP_AND_MAP_H
