@@ -113,7 +113,7 @@ pair<Community&, Community&> ApproximateCommunityDetection::addEdge(int srcId, i
 
 void ApproximateCommunityDetection::createHeapAndMap(Community& current_comm, Community& involved_comm) {
     // Iterate through community nodes to fill heapAndMap
-    vector<pair<int, double>> edge_fraction_gain;
+    vector<pair<int, double>> edge_fraction_gains;
     for (const auto& node: current_comm.nodes) {
         int edge_gain = 0;
         for (const auto& edge: node->edgeList) {
@@ -125,18 +125,20 @@ void ApproximateCommunityDetection::createHeapAndMap(Community& current_comm, Co
                 edge_gain += edge_weight;
             }
         }
-        edge_fraction_gain.emplace_back(node->id, static_cast<double>(edge_gain) / node->degree);
+        double fraction_gain = (node->degree != 0) ? static_cast<double>(edge_gain) / node->degree : 0.0;
+        edge_fraction_gains.emplace_back(node->id, fraction_gain);
     }
 
     // Fill heapAndMap
-    current_comm.node_removal_priority_queue.populateHeapAndMap(edge_fraction_gain);
+    current_comm.node_removal_priority_queue.populateHeapAndMap(edge_fraction_gains);
 }
 
-double ApproximateCommunityDetection::run2FMAlgorithm(Community& comm1, Community& comm2) {
+void ApproximateCommunityDetection::run2FMAlgorithm(Community& comm1, Community& comm2) {
     unordered_set<Node*> best_comm1_nodes;
     unordered_set<Node*> best_comm2_nodes;
+    unordered_set<int> frozen_node_ids;
     double best_modularity = -1.0;
-    while (!comm1.node_removal_priority_queue.isEmpty() && !comm2.node_removal_priority_queue.isEmpty()) {
+    while (!comm1.node_removal_priority_queue.isEmpty() || !comm2.node_removal_priority_queue.isEmpty()) {
         double comm1_value = comm1.node_removal_priority_queue.getMaxValue();
         double comm2_value = comm2.node_removal_priority_queue.getMaxValue();
 
@@ -158,17 +160,27 @@ double ApproximateCommunityDetection::run2FMAlgorithm(Community& comm1, Communit
         main_community->node_removal_priority_queue.popElement();
         main_community->nodes.erase(node_moved);
         other_community->nodes.insert(node_moved);
+        node_moved->label = other_community->id;
+
+        // Update frozen node ids
+        frozen_node_ids.insert(node_moved->id);
 
         // Update relevant information
         for (auto& edge: node_moved->edgeList) {
             Node* neighbor = edge.first;
             int edge_weight = edge.second;
             double pairwise_gain = static_cast<double>(edge_weight) / neighbor->degree;
+
+            // Find if neighbor is a frozen node
+            bool is_frozen_node = (frozen_node_ids.find(neighbor->id) != frozen_node_ids.end()) ? true: false;
+
             if (neighbor->label == main_community->id) {
-                // Update node removal priority queue
-                double old_value = main_community->node_removal_priority_queue.getValue(neighbor->id);
-                main_community->node_removal_priority_queue.deleteElement(neighbor->id);
-                main_community->node_removal_priority_queue.insertElement(neighbor->id, old_value + pairwise_gain);
+                if (!is_frozen_node) {
+                    // Update node removal priority queue
+                    double old_value = main_community->node_removal_priority_queue.getValue(neighbor->id);
+                    main_community->node_removal_priority_queue.deleteElement(neighbor->id);
+                    main_community->node_removal_priority_queue.insertElement(neighbor->id, old_value + 2.0 * pairwise_gain);
+                }
 
                 // Update e_in, e_out for main community
                 main_community->e_in -= edge_weight;
@@ -177,12 +189,14 @@ double ApproximateCommunityDetection::run2FMAlgorithm(Community& comm1, Communit
                 main_community->e_out -= edge_weight;
             }
             if (neighbor->label == other_community->id) {
-                // Update node removal priority queue
-                double old_value = other_community->node_removal_priority_queue.getValue(neighbor->id);
-                other_community->node_removal_priority_queue.deleteElement(neighbor->id);
-                other_community->node_removal_priority_queue.insertElement(neighbor->id, old_value - pairwise_gain);
+                if (!is_frozen_node) {
+                    // Update node removal priority queue
+                    double old_value = other_community->node_removal_priority_queue.getValue(neighbor->id);
+                    other_community->node_removal_priority_queue.deleteElement(neighbor->id);
+                    other_community->node_removal_priority_queue.insertElement(neighbor->id, old_value - 2.0 * pairwise_gain);  
+                }
 
-                // Update e_in, e_out for main community
+                // Update e_in, e_out for other community
                 other_community->e_in += edge_weight;
                 other_community->e_out -= edge_weight;
             } else {

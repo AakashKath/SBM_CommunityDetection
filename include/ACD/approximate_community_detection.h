@@ -22,7 +22,7 @@ class ApproximateCommunityDetection {
         void createCommunities();
         pair<Community&, Community&> addEdge(int srcId, int destId);
         void createHeapAndMap(Community& current_comm, Community& involved_comm);
-        double run2FMAlgorithm(Community& comm1, Community& comm2);
+        void run2FMAlgorithm(Community& comm1, Community& comm2);
         void updateCommunity(Community& comm, unordered_set<Node*> updated_comm_node_list);
 
     public:
