@@ -112,25 +112,42 @@ pair<Community&, Community&> ApproximateCommunityDetection::addEdge(int srcId, i
 }
 
 void ApproximateCommunityDetection::createHeapAndMap(Community& current_comm, Community& involved_comm) {
-    // Iterate through community nodes to fill heapAndMap
-    vector<pair<int, double>> edge_fraction_gains;
+    // Calculate current and involved community degree
+    double current_comm_degree = 0.0;
     for (const auto& node: current_comm.nodes) {
-        int edge_gain = 0;
+        current_comm_degree += node->degree;
+    }
+    double involved_comm_degree = 0.0;
+    for (const auto& node: involved_comm.nodes) {
+        involved_comm_degree += node->degree;
+    }
+
+    // Iterate through community nodes to fill heapAndMap
+    vector<pair<int, double>> modularity_gains;
+    for (const auto& node: current_comm.nodes) {
+        double gain = 0.0;
+
+        // Add involved community edges and remove current community edges
         for (const auto& edge: node->edgeList) {
             Node* neighbor = edge.first;
-            int edge_weight = edge.second;
+            double edge_weight = static_cast<double>(edge.second);
             if (neighbor->label == current_comm.id) {
-                edge_gain -= edge_weight;
-            } else if (neighbor->label == involved_comm.id) {
-                edge_gain += edge_weight;
+                gain -= edge_weight;
+            }
+            if (neighbor->label == involved_comm.id) {
+                gain += edge_weight;
             }
         }
-        double fraction_gain = (node->degree != 0) ? static_cast<double>(edge_gain) / node->degree : 0.0;
-        edge_fraction_gains.emplace_back(node->id, fraction_gain);
+
+        // Add current community squared degree and remove involved community squared degree
+        gain += static_cast<double>(node->degree * (current_comm_degree - node->degree)) / (2.0 * totalEdges);
+        gain -= static_cast<double>(node->degree * involved_comm_degree) / (2.0 * totalEdges);
+
+        modularity_gains.emplace_back(node->id, gain);
     }
 
     // Fill heapAndMap
-    current_comm.node_removal_priority_queue.populateHeapAndMap(edge_fraction_gains);
+    current_comm.node_removal_priority_queue.populateHeapAndMap(modularity_gains);
 }
 
 void ApproximateCommunityDetection::run2FMAlgorithm(Community& comm1, Community& comm2) {
@@ -169,7 +186,6 @@ void ApproximateCommunityDetection::run2FMAlgorithm(Community& comm1, Community&
         for (auto& edge: node_moved->edgeList) {
             Node* neighbor = edge.first;
             int edge_weight = edge.second;
-            double pairwise_gain = static_cast<double>(edge_weight) / neighbor->degree;
 
             // Find if neighbor is a frozen node
             bool is_frozen_node = (frozen_node_ids.find(neighbor->id) != frozen_node_ids.end()) ? true: false;
@@ -179,7 +195,7 @@ void ApproximateCommunityDetection::run2FMAlgorithm(Community& comm1, Community&
                     // Update node removal priority queue
                     double old_value = main_community->node_removal_priority_queue.getValue(neighbor->id);
                     main_community->node_removal_priority_queue.deleteElement(neighbor->id);
-                    main_community->node_removal_priority_queue.insertElement(neighbor->id, old_value + 2.0 * pairwise_gain);
+                    main_community->node_removal_priority_queue.insertElement(neighbor->id, old_value + 2.0 * edge_weight);
                 }
 
                 // Update e_in, e_out for main community
@@ -193,7 +209,7 @@ void ApproximateCommunityDetection::run2FMAlgorithm(Community& comm1, Community&
                     // Update node removal priority queue
                     double old_value = other_community->node_removal_priority_queue.getValue(neighbor->id);
                     other_community->node_removal_priority_queue.deleteElement(neighbor->id);
-                    other_community->node_removal_priority_queue.insertElement(neighbor->id, old_value - 2.0 * pairwise_gain);  
+                    other_community->node_removal_priority_queue.insertElement(neighbor->id, old_value - 2.0 * edge_weight);
                 }
 
                 // Update e_in, e_out for other community
