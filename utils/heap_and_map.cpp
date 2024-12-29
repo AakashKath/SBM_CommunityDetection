@@ -5,7 +5,7 @@ HeapAndMap::HeapAndMap(): heapArray(), heapSize(0) {
     // Default constructor
 }
 
-void HeapAndMap::populateHeapAndMap(vector<pair<int, double>> array) {
+void HeapAndMap::populateHeapAndMap(vector<pair<string, double>> array) {
     heapArray = move(array);
     heapSize = heapArray.size();
     createMap();
@@ -82,7 +82,7 @@ void HeapAndMap::heapifyUp(int index) {
     }
 }
 
-void HeapAndMap::insertElement(int elementId, double value) {
+void HeapAndMap::insertElement(string elementId, double value) {
     // Validate if element already exists
     if (id_index_map.find(elementId) != id_index_map.end()) {
         cerr << "insertElement: Element already exists with ID " << elementId << endl;
@@ -101,7 +101,7 @@ void HeapAndMap::insertElement(int elementId, double value) {
     heapifyUp(index);
 }
 
-void HeapAndMap::deleteElement(int elementId) {
+void HeapAndMap::deleteElement(string elementId) {
     auto it = id_index_map.find(elementId);
     if (it == id_index_map.end()) {
         cerr << "deleteElement: Element not found with ID " << elementId << endl;
@@ -123,26 +123,26 @@ void HeapAndMap::popElement() {
 double HeapAndMap::getMaxValue() {
     if (heapSize == 0) {
         cerr << "getMaxValue: Heap empty" << endl;
-        return -1;
+        return -numeric_limits<double>::infinity();
     }
 
     return heapArray[0].second;
 }
 
-double HeapAndMap::getValue(int elementId) {
+double HeapAndMap::getValue(string elementId) {
     auto it = id_index_map.find(elementId);
     if (it == id_index_map.end()) {
         cerr << "getValue: Element not found with ID " << elementId << endl;
-        return -1;
+        return -numeric_limits<double>::infinity();
     }
 
     return heapArray[it->second].second;
 }
 
-int HeapAndMap::getMaxElementId() {
+string HeapAndMap::getMaxElementId() {
     if (heapSize == 0) {
         cerr << "getMaxElementId: Heap empty" << endl;
-        return -1;
+        return "null";
     }
 
     return heapArray[0].first;
@@ -183,4 +183,16 @@ void HeapAndMap::printInfo() {
 
 bool HeapAndMap::isEmpty() {
     return heapSize == 0;
+}
+
+vector<string> HeapAndMap::getAllKeys(string elementId) {
+    vector<string> keys;
+    for (const auto& pair: heapArray) {
+        // Check if the key starts with the given elementId
+        if (pair.first.find(elementId) == 0) {
+            keys.push_back(pair.first);
+        }
+    }
+
+    return keys;
 }
