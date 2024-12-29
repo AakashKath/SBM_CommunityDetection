@@ -21,26 +21,35 @@ ApproximateCommunityDetection::ApproximateCommunityDetection(
     for (const auto& [src_id, dest_id]: addedEdges) {
         auto [src_community, dest_community] = addEdge(src_id, dest_id);
 
-        // Skip if both nodes are in the same community
-        if (src_community.id == dest_community.id) {
-            continue;
-        }
+        // // Skip if both nodes are in the same community
+        // if (src_community.id == dest_community.id) {
+        //     continue;
+        // }
 
-        // Create heapAndMap
-        createHeapAndMap(src_community, dest_community);
-        createHeapAndMap(dest_community, src_community);
+        // // Create heapAndMap
+        // createHeapAndMap(src_community, dest_community);
+        // createHeapAndMap(dest_community, src_community);
 
-        run2FMAlgorithm(src_community, dest_community);
+        // run2FMAlgorithm(src_community, dest_community);
     }
 
-    // // FM algorithm for all the communities
-    // bool no_node_moved = false;
-    // while(!no_node_moved) {
-    //     no_node_moved = runKFMAlgorithm();
-    //     if (!no_node_moved) {
-    //         cout << "Made some change." << endl;
-    //     }
-    // }
+    // FM algorithm for all the communities
+    bool no_node_moved = false;
+    while(!no_node_moved) {
+        no_node_moved = runKFMAlgorithm();
+        if (!no_node_moved) {
+            cout << "Made some change." << endl;
+        }
+    }
+
+    int total_movement = 0;
+    for (const auto& [key, value]: node_movement_frequency) {
+        total_movement += value;
+    }
+    double average_movement = node_movement_frequency.empty() ? 0.0 : static_cast<double>(total_movement) / static_cast<double>(node_movement_frequency.size());
+
+    cout << "Total movement: " << total_movement << endl;
+    cout << "Average movement: " << average_movement << endl;
 }
 
 ApproximateCommunityDetection::~ApproximateCommunityDetection() {
@@ -246,6 +255,26 @@ void ApproximateCommunityDetection::run2FMAlgorithm(Community& comm1, Community&
         }
     }
 
+    if (best_modularity != -1.0) {
+        vector<Node*> diff1, diff2;
+        set_difference(
+            comm1.nodes.begin(), comm1.nodes.end(),
+            best_comm1_nodes.begin(), best_comm1_nodes.end(),
+            back_inserter(diff1)
+        );
+        set_difference(
+            comm2.nodes.begin(), comm2.nodes.end(),
+            best_comm2_nodes.begin(), best_comm2_nodes.end(),
+            back_inserter(diff2)
+        );
+        for (const auto& node: diff1) {
+            node_movement_frequency[node->id] += 1;
+        }
+        for (const auto& node: diff2) {
+            node_movement_frequency[node->id] += 1;
+        }
+    }
+
     // Update Communities
     updateCommunity(comm1, best_comm1_nodes);
     updateCommunity(comm2, best_comm2_nodes);
@@ -389,6 +418,15 @@ bool ApproximateCommunityDetection::runKFMAlgorithm() {
 
     // Update Communities
     for (auto& comm: best_communities) {
+        vector<Node*> diff_nodes;
+        set_difference(
+            communities.at(comm.first).nodes.begin(), communities.at(comm.first).nodes.end(),
+            comm.second.begin(), comm.second.end(),
+            back_inserter(diff_nodes)
+        );
+        for (const auto& node: diff_nodes) {
+            node_movement_frequency[node->id] += 1;
+        }
         updateCommunity(communities.at(comm.first), comm.second);
     }
 

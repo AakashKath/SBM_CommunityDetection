@@ -18,6 +18,8 @@ class ApproximateCommunityDetection {
         int totalEdges;
         mt19937 gen;
 
+        unordered_map<int, int> node_movement_frequency;
+
         void initializePartition();
         void createCommunities();
         pair<Community&, Community&> addEdge(int srcId, int destId);
