@@ -21,17 +21,23 @@ ApproximateCommunityDetection::ApproximateCommunityDetection(
     for (const auto& [src_id, dest_id]: addedEdges) {
         auto [src_community, dest_community] = addEdge(src_id, dest_id);
 
-        // // Skip if both nodes are in the same community
-        // if (src_community.id == dest_community.id) {
-        //     continue;
-        // }
+        // Skip if both nodes are in the same community
+        if (src_community.id == dest_community.id) {
+            continue;
+        }
 
-        // // Create heapAndMap
-        // createHeapAndMap(src_community, dest_community);
-        // createHeapAndMap(dest_community, src_community);
+        // Create heapAndMap
+        createHeapAndMap(src_community, dest_community);
+        createHeapAndMap(dest_community, src_community);
 
-        // run2FMAlgorithm(src_community, dest_community);
+        run2FMAlgorithm(src_community, dest_community);
     }
+
+    int total_movement = 0;
+    for (const auto& [key, value]: node_movement_frequency) {
+        total_movement += value;
+    }
+    double average_movement = node_movement_frequency.empty() ? 0.0 : static_cast<double>(total_movement) / static_cast<double>(node_movement_frequency.size());
 
     // FM algorithm for all the communities
     bool no_node_moved = false;
@@ -42,14 +48,17 @@ ApproximateCommunityDetection::ApproximateCommunityDetection(
         }
     }
 
-    int total_movement = 0;
+    cout << "2 Total movement: " << total_movement << endl;
+    cout << "2 Average movement: " << average_movement << endl;
+
+    total_movement = 0;
     for (const auto& [key, value]: node_movement_frequency) {
         total_movement += value;
     }
-    double average_movement = node_movement_frequency.empty() ? 0.0 : static_cast<double>(total_movement) / static_cast<double>(node_movement_frequency.size());
+    average_movement = node_movement_frequency.empty() ? 0.0 : static_cast<double>(total_movement) / static_cast<double>(node_movement_frequency.size());
 
-    cout << "Total movement: " << total_movement << endl;
-    cout << "Average movement: " << average_movement << endl;
+    cout << "K Total movement: " << total_movement << endl;
+    cout << "K Average movement: " << average_movement << endl;
 }
 
 ApproximateCommunityDetection::~ApproximateCommunityDetection() {
