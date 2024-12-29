@@ -37,9 +37,6 @@ ApproximateCommunityDetection::ApproximateCommunityDetection(
     // bool no_node_moved = false;
     // while(!no_node_moved) {
     //     no_node_moved = runKFMAlgorithm();
-    //     if (!no_node_moved) {
-    //         cout << "Made some change." << endl;
-    //     }
     // }
 }
 
