@@ -13,32 +13,38 @@ ApproximateCommunityDetection::ApproximateCommunityDetection(
     gen(random_device{}())
 {
     // Assign nodes to random community
-    initialPartition();
+    initializePartition();
     createCommunities();
-    moveNodesForBestModularity();
 
     // Add edges and update communities
-    for (const auto& [srcId, destId]: addedEdges) {
-        // Skip self edges
-        if (srcId == destId) {
+    // TODO: Time to implement node removal functionality
+    for (const auto& [src_id, dest_id]: addedEdges) {
+        auto [src_community, dest_community] = addEdge(src_id, dest_id);
+
+        // Skip if both nodes are in the same community
+        if (src_community.id == dest_community.id) {
             continue;
         }
-        auto [src, dest] = addEdge(srcId, destId);
 
-        swapNodesIfPossible(src->label);
-        if (src->label != dest->label) {
-            swapNodesIfPossible(dest->label);
-        }
+        // Create heapAndMap
+        createHeapAndMap(src_community, dest_community);
+        createHeapAndMap(dest_community, src_community);
+
+        run2FMAlgorithm(src_community, dest_community);
     }
 
-    moveNodesForBestModularity();
+    // // FM algorithm for all the communities
+    // bool no_node_moved = false;
+    // while(!no_node_moved) {
+    //     no_node_moved = runKFMAlgorithm();
+    // }
 }
 
 ApproximateCommunityDetection::~ApproximateCommunityDetection() {
     // Nothing to clean
 }
 
-void ApproximateCommunityDetection::initialPartition() {
+void ApproximateCommunityDetection::initializePartition() {
     int number_nodes = acd_graph.nodes.size();
     uniform_int_distribution<int> dist(0, number_nodes - 1);
     unordered_set<int> usedNumbers;
@@ -71,11 +77,12 @@ void ApproximateCommunityDetection::createCommunities() {
                 return communities.at(node->label);
             } catch (const out_of_range&) {
                 Community new_comm;
+                new_comm.id = node->label;
                 return communities.emplace(node->label, move(new_comm)).first->second;
             }
         }();
 
-        comm.nodes.push_back(node.get());
+        comm.nodes.insert(node.get());
         for (const auto& edge: node.get()->edgeList) {
             if (edge.first->label == node->label) {
                 comm.e_in += edge.second;
@@ -88,432 +95,389 @@ void ApproximateCommunityDetection::createCommunities() {
     for (auto& comm: communities) {
         comm.second.e_in /= 2;
     }
-
-    // Iterate through communities to fill out/in-edge heapAndMap
-    for (auto& [community_label, comm]: communities) {
-        unordered_map<int, int> incoming_edge_weight;
-        unordered_map<int, int> outgoing_edge_weight;
-
-        for (const auto& node: comm.nodes) {
-            for (const auto& edge: node->edgeList) {
-                Node* neighbor = edge.first;
-                int edge_weight = edge.second;
-                if (neighbor->label != community_label) {
-                    outgoing_edge_weight[node->id] += edge_weight;
-                    incoming_edge_weight[neighbor->id] += edge_weight;
-                }
-            }
-        }
-
-        unordered_map<int, int> degrees{};
-        // Degree counts weight on edge as well
-        for (const auto& node: acd_graph.nodes) {
-            int degreeWeight = 0;
-            for (const auto& edge: node->edgeList) {
-                degreeWeight += edge.second;
-            }
-            degrees.emplace(node->id, degreeWeight);
-        }
-
-        // Fill nodes_to_be_removed
-        vector<pair<int, double>> outgoing_weight_vec;
-        for (auto& [neighbor_id, outgoing_weight]: outgoing_edge_weight) {
-            outgoing_weight_vec.emplace_back(neighbor_id, static_cast<double>(outgoing_weight) / degrees.at(neighbor_id));
-        }
-        comm.nodes_to_be_removed.populateHeapAndMap(outgoing_weight_vec);
-
-        // Fill nodes_to_be_added
-        vector<pair<int, double>> incoming_weight_vec;
-        for (auto& [neighbor_id, incoming_weight]: incoming_edge_weight) {
-            incoming_weight_vec.emplace_back(neighbor_id, static_cast<double>(incoming_weight) / degrees.at(neighbor_id));
-        }
-        comm.nodes_to_be_added.populateHeapAndMap(incoming_weight_vec);
-    }
 }
 
-void ApproximateCommunityDetection::moveNodesForBestModularity() {
-    double old_mod = 0.0;
-    double mod = newmansModularity(acd_graph);
-    do {
-        vector<int> randomised_communities(communityCount);
-        iota(randomised_communities.begin(), randomised_communities.end(), 0); // Fill with 0, 1, ..., communityCount - 1
-        shuffle(randomised_communities.begin(), randomised_communities.end(), gen);
-        for (const auto& community_label: randomised_communities) {
-            swapNodesIfPossible(community_label);
-        }
-        old_mod = mod;
-        mod = newmansModularity(acd_graph);
-    } while (mod > old_mod);
-}
-
-pair<Node*, Node*> ApproximateCommunityDetection::addEdge(int srcId, int destId) {
+pair<Community&, Community&> ApproximateCommunityDetection::addEdge(int srcId, int destId) {
     Node* src = acd_graph.getNode(srcId);
     Node* dest = acd_graph.getNode(destId);
 
     acd_graph.addUndirectedEdge(src, dest);
-
-    // Update heapAndMap
-    updateHeapAndMap(src);
-    updateHeapAndMap(dest);
+    totalEdges += 1;
 
     // Update e_in, e_out
     if (src->label == dest->label) {
         Community& comm = communities.at(src->label);
         comm.e_in += 1;
+        return make_pair(ref(comm), ref(comm));
     } else {
         Community& src_comm = communities.at(src->label);
         src_comm.e_out += 1;
         Community& dest_comm = communities.at(dest->label);
         dest_comm.e_out += 1;
-    }
-    totalEdges += 1;
-
-    return pair<Node*, Node*>(src, dest);
-}
-
-void ApproximateCommunityDetection::updateHeapAndMap(Node* node) {
-    int degree = 0;
-    int outgoing_edge_weight = 0;
-    unordered_map<int, int> communityEdgeWeight;
-    for (const auto& edge: node->edgeList) {
-        if (edge.first->label != node->label) {
-            outgoing_edge_weight += edge.second;
-            communityEdgeWeight[edge.first->label] += edge.second;
-        }
-        degree += edge.second;
-    }
-
-    // Update current community
-    Community& current_comm = communities.at(node->label);
-    current_comm.nodes_to_be_removed.deleteElement(node->id);
-    if (outgoing_edge_weight > 0) {
-        current_comm.nodes_to_be_removed.insertElement(node->id, static_cast<double>(outgoing_edge_weight) / degree);
-    }
-
-    // Update neighboring communities
-    for (const auto& pair: communityEdgeWeight) {
-        Community& comm = communities.at(pair.first);
-        comm.nodes_to_be_added.deleteElement(node->id);
-        comm.nodes_to_be_added.insertElement(node->id, static_cast<double>(pair.second) / degree);
+        return make_pair(ref(src_comm), ref(dest_comm));
     }
 }
 
-void ApproximateCommunityDetection::swapNodes(int community_label) {
-    try {
-        Community& comm = communities.at(community_label);
-
-        // Get top elements from heapAndMap
-        Node* node_removed = acd_graph.getNode(comm.nodes_to_be_removed.getMaxElementId());
-        Node* node_added = acd_graph.getNode(comm.nodes_to_be_added.getMaxElementId());
-
-        // Get the community of the added node
-        int involved_comm_label = node_added->label;
-        Community& involved_comm = communities.at(involved_comm_label);
-
-        // Remove nodes from current community queues
-        comm.nodes_to_be_removed.popElement();
-        comm.nodes_to_be_added.popElement();
-
-        // Remove nodes from involved community queues
-        involved_comm.nodes_to_be_removed.deleteElement(node_added->id);
-        involved_comm.nodes_to_be_added.deleteElement(node_removed->id);
-
-        // Calculate updated weights for node_removed
-        int old_community_edges = 0;
-        int new_community_edges = 0;
-        int degree = 0;
-        for (const auto& edge: node_removed->edgeList) {
-            if (edge.first->label != involved_comm_label) {
-                new_community_edges += edge.second;
-            }
-            if (edge.first->label == community_label) {
-                old_community_edges += edge.second;
-            }
-            degree += edge.second;
-        }
-
-        // Push the node into respective queues
-        if (new_community_edges > 0) {
-            involved_comm.nodes_to_be_removed.insertElement(node_removed->id, static_cast<double>(new_community_edges) / degree);
-        }
-        if (old_community_edges > 0) {
-            comm.nodes_to_be_added.insertElement(node_removed->id, static_cast<double>(old_community_edges) / degree);
-        }
-
-        // Calculate updated weights for node_added
-        old_community_edges = 0;
-        new_community_edges = 0;
-        degree = 0;
-        for (const auto& edge: node_added->edgeList) {
-            if (edge.first->label != community_label) {
-                new_community_edges += edge.second;
-            }
-            if (edge.first->label == involved_comm_label) {
-                old_community_edges += edge.second;
-            }
-            degree += edge.second;
-        }
-
-        // Push the node into respective queues
-        if (old_community_edges > 0) {
-            involved_comm.nodes_to_be_added.insertElement(node_added->id, static_cast<double>(old_community_edges) / degree);
-        }
-        if (new_community_edges > 0) {
-            comm.nodes_to_be_removed.insertElement(node_added->id, static_cast<double>(new_community_edges) / degree);
-        }
-
-        // Update node communities
-        node_added->label = community_label;
-        node_removed->label = involved_comm_label;
-
-        // Swap nodes among communities
-        comm.nodes.erase(remove(comm.nodes.begin(), comm.nodes.end(), node_removed), comm.nodes.end());
-        involved_comm.nodes.erase(remove(involved_comm.nodes.begin(), involved_comm.nodes.end(), node_added), involved_comm.nodes.end());
-        comm.nodes.push_back(node_added);
-        involved_comm.nodes.push_back(node_removed);
-    } catch (const out_of_range& e) {
-        cout << "Community not found. No changes made." << endl;
+void ApproximateCommunityDetection::createHeapAndMap(Community& current_comm, Community& involved_comm) {
+    // Calculate current and involved community degree
+    double current_comm_degree = 0.0;
+    for (const auto& node: current_comm.nodes) {
+        current_comm_degree += node->degree;
     }
-}
-
-bool ApproximateCommunityDetection::nodeSwapAllowed(int community_label) {
-    try{
-        Community& comm = communities.at(community_label);
-
-        // Get top elements from heapAndMap
-        int node_removed_id = comm.nodes_to_be_removed.getMaxElementId();
-        if (node_removed_id == -1) {
-            cout << "No node to be removed." << endl;
-            return false;
-        }
-        Node* node_removed = acd_graph.getNode(node_removed_id);
-        int node_added_id = comm.nodes_to_be_added.getMaxElementId();
-        if (node_added_id == -1) {
-            cout << "No node to be added." << endl;
-            return false;
-        }
-        Node* node_added = acd_graph.getNode(node_added_id);
-
-        // Get the community of the added node
-        int involved_comm_label = node_added->label;
-        Community& involved_comm = communities.at(involved_comm_label);
-
-        double initial_modularity = modularityContributionByCommunity(comm, totalEdges) + modularityContributionByCommunity(involved_comm, totalEdges);
-
-        int r_1_in{0}, r_1_out{0}, r_2_in{0}, r_2_out{0};
-        for (const auto& edge: node_removed->edgeList) {
-            // Ignore moving neighbor
-            if (edge.first->id == node_added_id) {
-                continue;
-            }
-
-            if (edge.first->label == community_label) {
-                r_1_in += edge.second;
-                r_1_out -= edge.second;
-            } else {
-                r_1_out += edge.second;
-            }
-
-            if (edge.first->label == involved_comm_label) {
-                r_2_in += edge.second;
-                r_2_out -= edge.second;
-            } else {
-                r_2_out += edge.second;
-            }
-        }
-
-        int a_1_in{0}, a_1_out{0}, a_2_in{0}, a_2_out{0};
-        for (const auto& edge: node_added->edgeList) {
-            // Ignore moving neighbor
-            if (edge.first->id == node_removed_id) {
-                continue;
-            }
-
-            if (edge.first->label == community_label) {
-                a_1_in += edge.second;
-                a_1_out -= edge.second;
-            } else {
-                a_1_out += edge.second;
-            }
-
-            if (edge.first->label == involved_comm_label) {
-                a_2_in += edge.second;
-                a_2_out -= edge.second;
-            } else {
-                a_2_out += edge.second;
-            }
-        }
-
-        double final_modularity = getModularity(comm.e_in - r_1_in + a_1_in, comm.e_out - r_1_out + a_1_out, totalEdges) +
-            getModularity(involved_comm.e_in - a_2_in + r_2_in, involved_comm.e_out - a_2_out + r_2_out, totalEdges);
-
-        if (final_modularity > initial_modularity) {
-            return true;
-        }
-    } catch (const out_of_range& e) {
-        cout << "Community not found. No changes made." << endl;
+    double involved_comm_degree = 0.0;
+    for (const auto& node: involved_comm.nodes) {
+        involved_comm_degree += node->degree;
     }
 
-    return false;
-}
+    // Iterate through community nodes to fill heapAndMap
+    vector<pair<string, double>> modularity_gains;
+    for (const auto& node: current_comm.nodes) {
+        double gain = 0.0;
 
-void ApproximateCommunityDetection::swapNodesIfPossible(int community_label) {
-    Community& comm = communities.at(community_label);
-
-    // Get top elements from heapAndMap
-    int node_removed_id = comm.nodes_to_be_removed.getMaxElementId();
-    if (node_removed_id == -1) {
-        cout << "No node_to_be_removed found." << endl;
-        return;
-    }
-    Node* node_removed = acd_graph.getNode(node_removed_id);
-    int node_added_id = comm.nodes_to_be_added.getMaxElementId();
-    if (node_added_id == -1) {
-        cout << "No node_to_be_added found." << endl;
-        return;
-    }
-    Node* node_added = acd_graph.getNode(node_added_id);
-
-    // Get the community of the added node
-    int involved_comm_label = node_added->label;
-    Community& involved_comm = communities.at(involved_comm_label);
-
-    double initial_modularity = modularityContributionByCommunity(comm, totalEdges) + modularityContributionByCommunity(involved_comm, totalEdges);
-
-    int r_1_in{0}, r_1_out{0}, r_2_in{0}, r_2_out{0};
-    // int node_removed_degree{0}, node_removed_new_community_edge_weight{0}, node_removed_old_community_edge_weight{0};
-    for (const auto& edge: node_removed->edgeList) {
-        // node_removed_degree += edge.second;
-        // if (edge.first->label != involved_comm_label) {
-        //     node_removed_new_community_edge_weight += edge.second;
-        // }
-        // if (edge.first->label == community_label) {
-        //     node_removed_old_community_edge_weight += edge.second;
-        // }
-
-        // Ignore moving neighbor
-        if (edge.first->id == node_added_id) {
-            continue;
-        }
-        if (edge.first->label == community_label) {
-            r_1_in += edge.second;
-            r_1_out -= edge.second;
-        } else {
-            r_1_out += edge.second;
-        }
-        if (edge.first->label == involved_comm_label) {
-            r_2_in += edge.second;
-            r_2_out -= edge.second;
-        } else {
-            r_2_out += edge.second;
-        }
-    }
-
-    int a_1_in{0}, a_1_out{0}, a_2_in{0}, a_2_out{0};
-    // int node_added_degree{0}, node_added_new_community_edge_weight{0}, node_added_old_community_edge_weight{0};
-    for (const auto& edge: node_added->edgeList) {
-        // node_added_degree += edge.second;
-        // if (edge.first->label != community_label) {
-        //     node_added_new_community_edge_weight += edge.second;
-        // }
-        // if (edge.first->label == involved_comm_label) {
-        //     node_added_old_community_edge_weight += edge.second;
-        // }
-
-        // Ignore moving neighbor
-        if (edge.first->id == node_removed_id) {
-            continue;
-        }
-        if (edge.first->label == community_label) {
-            a_1_in += edge.second;
-            a_1_out -= edge.second;
-        } else {
-            a_1_out += edge.second;
-        }
-        if (edge.first->label == involved_comm_label) {
-            a_2_in += edge.second;
-            a_2_out -= edge.second;
-        } else {
-            a_2_out += edge.second;
-        }
-    }
-
-    double final_modularity = getModularity(comm.e_in - r_1_in + a_1_in, comm.e_out - r_1_out + a_1_out, totalEdges) +
-        getModularity(involved_comm.e_in - a_2_in + r_2_in, involved_comm.e_out - a_2_out + r_2_out, totalEdges);
-
-    if (final_modularity > initial_modularity) {
-        // Update node communities
-        node_added->label = community_label;
-        node_removed->label = involved_comm_label;
-
-        // Swap nodes among communities
-        comm.nodes.erase(remove(comm.nodes.begin(), comm.nodes.end(), node_removed), comm.nodes.end());
-        involved_comm.nodes.erase(remove(involved_comm.nodes.begin(), involved_comm.nodes.end(), node_added), involved_comm.nodes.end());
-        comm.nodes.push_back(node_added);
-        involved_comm.nodes.push_back(node_removed);
-
-        // Update nodes_to_be_removed and nodes_to_be_added
-        repopulateHeapAndMap(comm, community_label);
-        repopulateHeapAndMap(involved_comm, involved_comm_label);
-
-        // TODO: Fix this logic, it's not working as expected
-        // // Remove nodes from current community queues
-        // comm.nodes_to_be_removed.popElement();
-        // comm.nodes_to_be_added.popElement();
-
-        // // Remove nodes from involved community queues
-        // involved_comm.nodes_to_be_removed.deleteElement(node_added->id);
-        // involved_comm.nodes_to_be_added.deleteElement(node_removed->id); // TODO: Fix nodes_to_be_added, take care of all removed edges
-
-        // // Push the node into respective queues
-        // if (node_removed_new_community_edge_weight > 0) {
-        //     involved_comm.nodes_to_be_removed.insertElement(node_removed->id, static_cast<double>(node_removed_new_community_edge_weight));
-        //     // involved_comm.nodes_to_be_removed.insertElement(node_removed->id, static_cast<double>(node_removed_new_community_edge_weight) / node_removed_degree);
-        // }
-        // if (node_removed_old_community_edge_weight > 0) {
-        //     comm.nodes_to_be_added.insertElement(node_removed->id, static_cast<double>(node_removed_old_community_edge_weight));
-        //     // comm.nodes_to_be_added.insertElement(node_removed->id, static_cast<double>(node_removed_old_community_edge_weight) / node_removed_degree);
-        // }
-
-        // // Push the node into respective queues
-        // if (node_added_old_community_edge_weight > 0) {
-        //     involved_comm.nodes_to_be_added.insertElement(node_added->id, static_cast<double>(node_added_old_community_edge_weight));
-        //     // involved_comm.nodes_to_be_added.insertElement(node_added->id, static_cast<double>(node_added_old_community_edge_weight) / node_added_degree);
-        // }
-        // if (node_added_new_community_edge_weight > 0) {
-        //     comm.nodes_to_be_removed.insertElement(node_added->id, static_cast<double>(node_added_new_community_edge_weight));
-        //     // comm.nodes_to_be_removed.insertElement(node_added->id, static_cast<double>(node_added_new_community_edge_weight) / node_added_degree);
-        // }
-
-        // // Update e_in, e_out
-        // comm.e_in += a_1_in - r_1_in;
-        // comm.e_out += a_1_out - r_1_out;
-        // involved_comm.e_in += r_2_in - a_2_in;
-        // involved_comm.e_out += r_2_out - a_2_out;
-    }
-}
-
-void ApproximateCommunityDetection::repopulateHeapAndMap(Community& comm, int community_label) {
-    unordered_map<int, int> outgoing_edge_weight;
-    unordered_map<int, int> incoming_edge_weight;
-    unordered_map<int, int> degrees;
-    for (const auto& node: comm.nodes) {
+        // Add involved community edges and remove current community edges
         for (const auto& edge: node->edgeList) {
-            if (edge.first->label != community_label) {
-                outgoing_edge_weight[node->id] += edge.second;
-                incoming_edge_weight[edge.first->id] += edge.second;
+            Node* neighbor = edge.first;
+            double edge_weight = static_cast<double>(edge.second);
+            if (neighbor->label == current_comm.id) {
+                gain -= edge_weight;
             }
-            degrees[node->id] += edge.second;
+            if (neighbor->label == involved_comm.id) {
+                gain += edge_weight;
+            }
+        }
+
+        // Add current community squared degree and remove involved community squared degree
+        gain += static_cast<double>(node->degree * (current_comm_degree - node->degree)) / (2.0 * totalEdges);
+        gain -= static_cast<double>(node->degree * involved_comm_degree) / (2.0 * totalEdges);
+
+        modularity_gains.emplace_back(to_string(node->id), gain);
+    }
+
+    // Fill heapAndMap
+    current_comm.node_removal_priority_queue.populateHeapAndMap(modularity_gains);
+}
+
+void ApproximateCommunityDetection::run2FMAlgorithm(Community& comm1, Community& comm2) {
+    unordered_set<Node*> best_comm1_nodes;
+    unordered_set<Node*> best_comm2_nodes;
+    unordered_set<int> frozen_node_ids;
+    double best_modularity = -1.0;
+    while (!comm1.node_removal_priority_queue.isEmpty() || !comm2.node_removal_priority_queue.isEmpty()) {
+        // Determine which community will move the node
+        Community* main_community = nullptr;
+        Community* other_community = nullptr;
+        if (comm1.nodes.size() != comm2.nodes.size()) {
+            main_community = (comm1.nodes.size() > comm2.nodes.size()) ? &comm1 : &comm2;
+            other_community = (main_community == &comm1) ? &comm2 : &comm1;
+        } else {
+            double comm1_value = comm1.node_removal_priority_queue.getMaxValue();
+            double comm2_value = comm2.node_removal_priority_queue.getMaxValue();
+            main_community = (comm1_value >= comm2_value) ? &comm1 : &comm2;
+            other_community = (main_community == &comm1) ? &comm2 : &comm1;
+        }
+
+        // Get top elements from heapAndMap
+        Node* node_moved = acd_graph.getNode(stoi(main_community->node_removal_priority_queue.getMaxElementId()));
+
+        // Remove node from main community
+        main_community->node_removal_priority_queue.popElement();
+        main_community->nodes.erase(node_moved);
+        other_community->nodes.insert(node_moved);
+        node_moved->label = other_community->id;
+
+        // Update frozen node ids
+        frozen_node_ids.insert(node_moved->id);
+
+        // Update relevant information
+        for (auto& edge: node_moved->edgeList) {
+            Node* neighbor = edge.first;
+            int edge_weight = edge.second;
+
+            // Find if neighbor is a frozen node
+            bool is_frozen_node = (frozen_node_ids.find(neighbor->id) != frozen_node_ids.end()) ? true: false;
+
+            if (neighbor->label == main_community->id) {
+                if (!is_frozen_node) {
+                    // Update node removal priority queue
+                    double old_value = main_community->node_removal_priority_queue.getValue(to_string(neighbor->id));
+                    main_community->node_removal_priority_queue.deleteElement(to_string(neighbor->id));
+                    main_community->node_removal_priority_queue.insertElement(to_string(neighbor->id), old_value + 2.0 * edge_weight);
+                }
+
+                // Update e_in, e_out for main community
+                main_community->e_in -= edge_weight;
+                main_community->e_out += edge_weight;
+            } else {
+                main_community->e_out -= edge_weight;
+            }
+            if (neighbor->label == other_community->id) {
+                if (!is_frozen_node) {
+                    // Update node removal priority queue
+                    double old_value = other_community->node_removal_priority_queue.getValue(to_string(neighbor->id));
+                    other_community->node_removal_priority_queue.deleteElement(to_string(neighbor->id));
+                    other_community->node_removal_priority_queue.insertElement(to_string(neighbor->id), old_value - 2.0 * edge_weight);
+                }
+
+                // Update e_in, e_out for other community
+                other_community->e_in += edge_weight;
+                other_community->e_out -= edge_weight;
+            } else {
+                other_community->e_out += edge_weight;
+            }
+        }
+
+        if (main_community->nodes.size() == other_community->nodes.size()) {
+            // Calculate modularity for both commuitites
+            double main_comm_modularity = modularityContributionByCommunity(*main_community, totalEdges);
+            double other_comm_modularity = modularityContributionByCommunity(*other_community, totalEdges);
+            if (main_comm_modularity + other_comm_modularity > best_modularity) {
+                best_modularity = main_comm_modularity + other_comm_modularity;
+                if (main_community == &comm1) {
+                    best_comm1_nodes = main_community->nodes;
+                    best_comm2_nodes = other_community->nodes;
+                } else {
+                    best_comm1_nodes = other_community->nodes;
+                    best_comm2_nodes = main_community->nodes;
+                }
+            }
         }
     }
-    vector<pair<int, double>> outgoing_weight_vec(outgoing_edge_weight.begin(), outgoing_edge_weight.end());
-    for_each(outgoing_weight_vec.begin(), outgoing_weight_vec.end(), [&](pair<int, double>& pair) {
-        pair.second = static_cast<double>(pair.second) / degrees[pair.first];
-    });
-    comm.nodes_to_be_removed.populateHeapAndMap(outgoing_weight_vec);
-    vector<pair<int, double>> incoming_weight_vec(incoming_edge_weight.begin(), incoming_edge_weight.end());
-    for_each(incoming_weight_vec.begin(), incoming_weight_vec.end(), [&](pair<int, double>& pair) {
-        pair.second = static_cast<double>(pair.second) / degrees[pair.first];
-    });
-    comm.nodes_to_be_added.populateHeapAndMap(incoming_weight_vec);
+
+    // Update Communities
+    updateCommunity(comm1, best_comm1_nodes);
+    updateCommunity(comm2, best_comm2_nodes);
+}
+
+void ApproximateCommunityDetection::updateKCommunityInformation(
+    Node* node_moved,
+    Community* main_community,
+    Community* other_community,
+    unordered_set<int>& frozen_node_ids
+) {
+    // Update relevant information
+    for (auto& edge: node_moved->edgeList) {
+        Node* neighbor = edge.first;
+        int edge_weight = edge.second;
+
+        // Find if neighbor is a frozen node
+        bool is_frozen_node = (frozen_node_ids.find(neighbor->id) != frozen_node_ids.end()) ? true: false;
+
+        if (neighbor->label == main_community->id) {
+            if (!is_frozen_node) {
+                // Update node removal priority queue
+                vector<string> all_keys = other_community->node_removal_priority_queue.getAllKeys(to_string(neighbor->id));
+                for (auto& key: all_keys) {
+                    double old_value = main_community->node_removal_priority_queue.getValue(key);
+                    main_community->node_removal_priority_queue.deleteElement(key);
+                    main_community->node_removal_priority_queue.insertElement(key, old_value + 2.0 * edge_weight);
+                }
+            }
+
+            // Update e_in, e_out for main community
+            main_community->e_in -= edge_weight;
+            main_community->e_out += edge_weight;
+        } else {
+            main_community->e_out -= edge_weight;
+        }
+        if (neighbor->label == other_community->id) {
+            if (!is_frozen_node) {
+                // Update node removal priority queue
+                vector<string> all_keys = other_community->node_removal_priority_queue.getAllKeys(to_string(neighbor->id));
+                for (auto& key: all_keys) {
+                    double old_value = other_community->node_removal_priority_queue.getValue(key);
+                    other_community->node_removal_priority_queue.deleteElement(key);
+                    other_community->node_removal_priority_queue.insertElement(key, old_value - 2.0 * edge_weight);
+                }
+            }
+
+            // Update e_in, e_out for other community
+            other_community->e_in += edge_weight;
+            other_community->e_out -= edge_weight;
+        } else {
+            other_community->e_out += edge_weight;
+        }
+    }
+}
+
+void ApproximateCommunityDetection::updateCommunity(Community& comm, unordered_set<Node*> comm_node_list) {
+    // Update community nodes
+    comm.nodes = comm_node_list;
+    comm.node_removal_priority_queue = HeapAndMap();
+
+    // Update node labels
+    for (auto& node: comm.nodes) {
+        node->label = comm.id;
+    }
+
+    // Update e_in, e_out
+    comm.e_in = 0;
+    comm.e_out = 0;
+    for (const auto& node: comm_node_list) {
+        for (const auto& edge: node->edgeList) {
+            if (edge.first->label == node->label) {
+                comm.e_in += edge.second;
+            } else {
+                comm.e_out += edge.second;
+            }
+        }
+    }
+    comm.e_in /= 2;
+}
+
+bool ApproximateCommunityDetection::runKFMAlgorithm() {
+    bool no_node_moved = true;
+
+    createKHeapAndMap();
+
+    unordered_set<int> frozen_node_ids;
+    double best_modularity = newmansModularity(communities, totalEdges);
+    unordered_map<int, unordered_set<Node*>> best_communities;
+    for (auto& comm: communities) {
+        best_communities[comm.first] = comm.second.nodes;
+    }
+
+    while (!allCommunitiesQueueEmpty()) {
+        Community* main_comm = getMainCommunity();
+
+        // Stop if no main community is found
+        if (main_comm == nullptr) {
+            break;
+        }
+
+        // Get top elements from heapAndMap
+        string node_info = main_comm->node_removal_priority_queue.getMaxElementId();
+        if (node_info == "null") {
+            break;
+        }
+        int node_id = stoi(node_info.substr(0, node_info.find("_")));
+        int other_comm_id = stoi(node_info.substr(node_info.find("_") + 1));
+        Node* node_moved = acd_graph.getNode(node_id);
+
+        // Get next relevant community
+        Community* other_comm = &communities.at(other_comm_id);
+
+        // Remove node from main community
+        vector<string> all_keys = main_comm->node_removal_priority_queue.getAllKeys(to_string(node_id));
+        for (auto& key: all_keys) {
+            main_comm->node_removal_priority_queue.deleteElement(key);
+        }
+        main_comm->nodes.erase(node_moved);
+        other_comm->nodes.insert(node_moved);
+        node_moved->label = other_comm->id;
+
+        // Update frozen node ids
+        frozen_node_ids.insert(node_moved->id);
+
+        // Update relevant community information
+        updateKCommunityInformation(node_moved, main_comm, other_comm, frozen_node_ids);
+
+        if (allCommunitiesSameSize()) {
+            // Calculate overall modularity
+            double current_modularity = newmansModularity(communities, totalEdges);
+            if (current_modularity > best_modularity) {
+                no_node_moved = false;
+                best_modularity = current_modularity;
+                for (auto& comm: communities) {
+                    best_communities[comm.first] = comm.second.nodes;
+                }
+            }
+        }
+    }
+
+    // Update Communities
+    for (auto& comm: best_communities) {
+        updateCommunity(communities.at(comm.first), comm.second);
+    }
+
+    return no_node_moved;
+}
+
+bool ApproximateCommunityDetection::allCommunitiesQueueEmpty() {
+    for (auto& comm: communities) {
+        if (!comm.second.node_removal_priority_queue.isEmpty()) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool ApproximateCommunityDetection::allCommunitiesSameSize() {
+    size_t size = communities.begin()->second.nodes.size();
+    for (auto& comm: communities) {
+        if (comm.second.nodes.size() != size) {
+            return false;
+        }
+    }
+    return true;
+}
+
+Community* ApproximateCommunityDetection::getMainCommunity() {
+    size_t max_size = 0;
+    double max_priority = -numeric_limits<double>::infinity();
+    Community* main_community = nullptr;
+
+    // Find community with maximum priority
+    for (auto& comm: communities) {
+        if (comm.second.nodes.size() > max_size) {
+            max_size = comm.second.nodes.size();
+            main_community = &comm.second;
+            max_priority = comm.second.node_removal_priority_queue.getMaxValue();
+        } else if (comm.second.nodes.size() == max_size) {
+            // Break ties using priority
+            double priority = comm.second.node_removal_priority_queue.getMaxValue();
+            if (priority > max_priority) {
+                main_community = &comm.second;
+                max_priority = priority;
+            }
+        }
+    }
+
+    return main_community;
+}
+
+// TODO: Check for correctness
+void ApproximateCommunityDetection::createKHeapAndMap() {
+    // Calculate community degree
+    unordered_map<int, double> community_degrees;
+    for (const auto& comm: communities) {
+        double degree = 0.0;
+        for (const auto& node: comm.second.nodes) {
+            degree += node->degree;
+        }
+        community_degrees[comm.first] = degree;
+    }
+
+    // Calculate modularity gains for each community pair
+    for (auto& main_comm: communities) {
+        vector<pair<string, double>> modularity_gains;
+        for (const auto& node: main_comm.second.nodes) {
+            unordered_map<int, double> node_community_contribution;
+            node_community_contribution[main_comm.first] = 0.0;
+            for (const auto& edge: node->edgeList) {
+                Node* neighbor = edge.first;
+                double edge_weight = static_cast<double>(edge.second);
+                node_community_contribution[neighbor->label] += edge_weight;
+            }
+
+            double degree_squared = static_cast<double>(node->degree * (community_degrees.at(main_comm.first) - node->degree)) / (2.0 * totalEdges);
+            double current_community_loss = node_community_contribution.at(main_comm.first) - degree_squared;
+
+            for (const auto& comm: communities) {
+                if (comm.first == main_comm.first) {
+                    continue;
+                }
+                double gain = 0.0;
+                try {
+                    gain += node_community_contribution.at(comm.first);
+                } catch (const out_of_range&) {
+                    gain = 0.0;
+                }
+                gain -= static_cast<double>(node->degree * community_degrees.at(comm.first)) / (2.0 * totalEdges);
+                gain -= current_community_loss;
+
+                modularity_gains.emplace_back(to_string(node->id) + "_" + to_string(comm.first), gain);
+            }
+        }
+        main_comm.second.node_removal_priority_queue.populateHeapAndMap(modularity_gains);
+    }
 }

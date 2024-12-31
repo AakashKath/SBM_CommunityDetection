@@ -64,7 +64,8 @@ generated_sequence generateSequence(string filename) {
     cout << "Uneven distribution of nodes among communities: " << uneven_node_distribution << endl;
     cout << "Algorithm used: " << (algorithm_number == 1 ? "Dynamic Community Detection"
                                     : (algorithm_number == 2 ? "Belief Propagation"
-                                    : "Unknown Algorithm"))
+                                    : (algorithm_number == 3 ? "Approximate Community Detection"
+                                    : "Unknown Algorithm")))
                                 << endl;
     cout << "For now we add edges randomly." << endl;
     if (algorithm_number == 1) {

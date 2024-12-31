@@ -18,6 +18,7 @@ class Node {
         int id;
         int label;
         int offset;
+        int degree;
         // TODO: need to store only address, all edge info will be stored in a very long list
         vector<pair<Node*, int>> edgeList; // {dest_address, weight}
         unordered_map<int, vector<double>> messages;
@@ -41,6 +42,7 @@ class Graph {
         Graph(const Graph& other);
         Graph& operator=(const Graph& other);
 
+        // TODO: need to move nodes to unordered_map(possibly would remove id_to_index_mapping)
         vector<unique_ptr<Node>> nodes;
         unordered_map<int, size_t> id_to_index_mapping;
 

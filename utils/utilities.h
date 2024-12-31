@@ -6,6 +6,7 @@
 #include "heap_and_map.h"
 #include "src/graph.h"
 #include "ortools/linear_solver/linear_solver.h"
+#include <unordered_set>
 
 using namespace std;
 using namespace operations_research;
@@ -22,13 +23,12 @@ struct pair_hash {
 
 class Community {
     public:
+        int id;
         int e_in = 0;
         int e_out = 0;
-        vector<Node*> nodes;
-        // Nodes within the community with edges going out of the community
-        HeapAndMap nodes_to_be_removed;
-        // Nodes out of the community with edges coming into the community
-        HeapAndMap nodes_to_be_added;
+        unordered_set<Node*> nodes;
+        // Node removal priority queue
+        HeapAndMap node_removal_priority_queue;
 
         Community();
         ~Community();
