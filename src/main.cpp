@@ -69,6 +69,11 @@ int main(int argc, char* argv[]) {
             cout << "Node: " << label.first << " Community: " << label.second << endl;
         }
         acd.acd_graph.draw("predicted_graph.png");
+    } else if (gs.algorithm_number == 4) {
+        for (const auto& edge: gs.addedEdges) {
+            gs.sbm.sbm_graph.addUndirectedEdge(edge.first, edge.second);
+        }
+        solve_ilp(gs.sbm.sbm_graph);
     }
 
     return 0;

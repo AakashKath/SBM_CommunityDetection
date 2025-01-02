@@ -12,15 +12,6 @@ using namespace std;
 using namespace operations_research;
 
 
-struct pair_hash {
-    template <class T1, class T2>
-    size_t operator()(const pair<T1, T2>& pair) const {
-        auto h1 = hash<T1>{}(pair.first);
-        auto h2 = hash<T2>{}(pair.second);
-        return h1 ^ h2;
-    }
-};
-
 class Community {
     public:
         int id;

@@ -65,7 +65,8 @@ generated_sequence generateSequence(string filename) {
     cout << "Algorithm used: " << (algorithm_number == 1 ? "Dynamic Community Detection"
                                     : (algorithm_number == 2 ? "Belief Propagation"
                                     : (algorithm_number == 3 ? "Approximate Community Detection"
-                                    : "Unknown Algorithm")))
+                                    : (algorithm_number == 4 ? "ILP Solver"
+                                    : "Unknown Algorithm"))))
                                 << endl;
     cout << "For now we add edges randomly." << endl;
     if (algorithm_number == 1) {

@@ -149,60 +149,51 @@ void solve_ilp(const Graph& graph) {
     }
 
     // Decision variables Xuv
-    unordered_map<pair<int, int>, MPVariable*, pair_hash> Xuv;
+    unordered_map<string, MPVariable*> Xuv;
     for (const auto& node1: graph.nodes) {
         for (const auto& node2: graph.nodes) {
-            Xuv[make_pair(node1->id, node2->id)] = solver->MakeIntVar(0.0, 1.0, "X_" + to_string(node1->id) + "_" + to_string(node2->id));
+            Xuv[to_string(node1->id) + "_" + to_string(node2->id)] = solver->MakeIntVar(0.0, 1.0, "X" + to_string(node1->id) + "_" + to_string(node2->id));
         }
     }
 
     // Constraints: Reflexivity
     for (const auto& node: graph.nodes) {
-        solver->MakeRowConstraint(1.0, 1.0)->SetCoefficient(Xuv[make_pair(node->id, node->id)], 1.0);
+        auto constraint = solver->MakeRowConstraint(1.0, 1.0);
+        constraint->SetCoefficient(Xuv[to_string(node->id) + "_" + to_string(node->id)], 1.0);
     }
 
     // Constraints: Symmetry
-    for (const auto& node1: graph.nodes) {
-        for (const auto& node2: graph.nodes) {
+    for (int i = 0; i < graph.nodes.size(); ++i) {
+        for (int j = i + 1; j < graph.nodes.size(); ++j) {
             auto constraint = solver->MakeRowConstraint(0.0, 0.0);
-            constraint->SetCoefficient(Xuv[make_pair(node1->id, node2->id)], 1.0);
-            constraint->SetCoefficient(Xuv[make_pair(node2->id, node1->id)], -1.0);
+            constraint->SetCoefficient(Xuv[to_string(graph.nodes[i]->id) + "_" + to_string(graph.nodes[j]->id)], 1.0);
+            constraint->SetCoefficient(Xuv[to_string(graph.nodes[j]->id) + "_" + to_string(graph.nodes[i]->id)], -1.0);
         }
     }
 
     // Constraints: Transitivity
-    for (const auto& node1: graph.nodes) {
-        for (const auto& node2: graph.nodes) {
-            for (const auto& node3: graph.nodes) {
+    for (int i = 0; i < graph.nodes.size(); ++i) {
+        for (int j = i + 1; j < graph.nodes.size(); ++j) {
+            for (int k = j + 1; k < graph.nodes.size(); ++k) {
                 auto constraint = solver->MakeRowConstraint(0.0, 1.0);
-                constraint->SetCoefficient(Xuv[make_pair(node1->id, node2->id)], 1.0);
-                constraint->SetCoefficient(Xuv[make_pair(node2->id, node3->id)], 1.0);
-                constraint->SetCoefficient(Xuv[make_pair(node1->id, node3->id)], -2.0);
+                constraint->SetCoefficient(Xuv[to_string(graph.nodes[i]->id) + "_" + to_string(graph.nodes[j]->id)], 1.0);
+                constraint->SetCoefficient(Xuv[to_string(graph.nodes[j]->id) + "_" + to_string(graph.nodes[k]->id)], 1.0);
+                constraint->SetCoefficient(Xuv[to_string(graph.nodes[i]->id) + "_" + to_string(graph.nodes[k]->id)], -2.0);
             }
         }
     }
 
     double m = static_cast<double>(graph.getTotalEdges());
 
-    unordered_map<int, int> degrees{};
-
-    // Degree counts weight on edge as well
-    for (const auto& node: graph.nodes) {
-        int degreeWeight = 0;
-        for (const auto& edge: node->edgeList) {
-            degreeWeight += edge.second;
-        }
-        degrees.emplace(node->id, degreeWeight);
+    if (m == 0) {
+        cerr << "SolveILP: No edges in the graph." << endl;
+        return;
     }
 
     // Define the objective: Maximize the total weight of selected vertices
     MPObjective* const objective = solver->MutableObjective();
     for (const auto& node1: graph.nodes) {
         for (const auto& node2: graph.nodes) {
-            // Skip self-pairs
-            if (node1->id == node2->id) {
-                continue;
-            }
             double edge_weight = 0.0;
             for (const auto& edge: node1->edgeList) {
                 if (edge.first->id == node2->id) {
@@ -210,8 +201,9 @@ void solve_ilp(const Graph& graph) {
                     break;
                 }
             }
-            double degree_product = degrees[node1->id] * degrees[node2->id] / (2.0 * m);
-            objective->SetCoefficient(Xuv[make_pair(node1->id, node2->id)], (1 / 2.0 * m) * (edge_weight - degree_product));
+            double degree_product = static_cast<double>(node1->degree * node2->degree) / (2.0 * m);
+            double coeff = (1 / (2.0 * m)) * static_cast<double>(edge_weight - degree_product);
+            objective->SetCoefficient(Xuv[to_string(node1->id) + "_" + to_string(node2->id)], coeff);
         }
     }
     objective->SetMaximization();
@@ -224,7 +216,7 @@ void solve_ilp(const Graph& graph) {
         cout << "Optimal solution found!" << endl;
         for (const auto& node1: graph.nodes) {
             for (const auto& node2: graph.nodes) {
-                if (Xuv[make_pair(node1->id, node2->id)]->solution_value() == 1.0) {
+                if (Xuv[to_string(node1->id) + "_" + to_string(node2->id)]->solution_value() == 1.0) {
                     cout << "Node: " << node1->id << " and " << node2->id << " are in the same cluster." << endl;
                 }
             }
