@@ -86,10 +86,23 @@ void IPSolver::addTransitivityConstraints(MPSolver* solver, unordered_map<string
     for (int i = 0; i < ip_graph.nodes.size(); ++i) {
         for (int j = i + 1; j < ip_graph.nodes.size(); ++j) {
             for (int k = j + 1; k < ip_graph.nodes.size(); ++k) {
-                auto constraint = solver->MakeRowConstraint(0.0, 1.0);
+                // i -> j, j -> k, i -> k
+                auto constraint = solver->MakeRowConstraint(-MPSolver::infinity(), 1.0);
                 constraint->SetCoefficient(Xuv[to_string(ip_graph.nodes[i]->id) + "_" + to_string(ip_graph.nodes[j]->id)], 1.0);
                 constraint->SetCoefficient(Xuv[to_string(ip_graph.nodes[j]->id) + "_" + to_string(ip_graph.nodes[k]->id)], 1.0);
                 constraint->SetCoefficient(Xuv[to_string(ip_graph.nodes[i]->id) + "_" + to_string(ip_graph.nodes[k]->id)], -2.0);
+
+                // i -> k, i -> j, j -> k
+                constraint = solver->MakeRowConstraint(-MPSolver::infinity(), 1.0);
+                constraint->SetCoefficient(Xuv[to_string(ip_graph.nodes[i]->id) + "_" + to_string(ip_graph.nodes[k]->id)], 1.0);
+                constraint->SetCoefficient(Xuv[to_string(ip_graph.nodes[i]->id) + "_" + to_string(ip_graph.nodes[j]->id)], 1.0);
+                constraint->SetCoefficient(Xuv[to_string(ip_graph.nodes[j]->id) + "_" + to_string(ip_graph.nodes[k]->id)], -2.0);
+
+                // j -> k, i -> k, i -> j
+                constraint = solver->MakeRowConstraint(-MPSolver::infinity(), 1.0);
+                constraint->SetCoefficient(Xuv[to_string(ip_graph.nodes[j]->id) + "_" + to_string(ip_graph.nodes[k]->id)], 1.0);
+                constraint->SetCoefficient(Xuv[to_string(ip_graph.nodes[i]->id) + "_" + to_string(ip_graph.nodes[k]->id)], 1.0);
+                constraint->SetCoefficient(Xuv[to_string(ip_graph.nodes[i]->id) + "_" + to_string(ip_graph.nodes[j]->id)], -2.0);
             }
         }
     }
