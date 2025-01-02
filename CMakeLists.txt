@@ -1,52 +1,17 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.30.2)
 
 # Project name
-project(SBM_CommunityDetection VERSION 0.1.0 LANGUAGES C CXX)
+project(SBM_CommunityDetection VERSION 1.0.0 LANGUAGES C CXX)
 
 # Set C++ standard
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Define library name
-set(LIBRARY_NAME
-    SBM_CommunityDetection
-)
+set(LIBRARY_NAME SBM_CommunityDetection)
 
 # Define test name
-set(TEST_NAME
-    SBM_Test
-)
-
-# List all submodules
-set(SUBMODULES
-    "json"
-    # "googletest"
-    "ortools"
-)
-
-# Enable building dependencies like Abseil and Protobuf automatically
-set(BUILD_DEPS ON CACHE BOOL "Build dependencies automatically")
-
-find_package(Git QUIET)
-if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
-    # Update submodules as needed
-    option(GIT_SUBMODULE "Check submodules during build" ON)
-    if(GIT_SUBMODULE)
-        message(STATUS "Submodule update")
-        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
-                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                        RESULT_VARIABLE GIT_SUBMOD_RESULT)
-        if(NOT GIT_SUBMOD_RESULT EQUAL "0")
-            message(FATAL_ERROR "git submodule update --init --recursive failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
-        endif()
-    endif()
-endif()
-
-foreach(SUBMODULE ${SUBMODULES})
-    if(NOT EXISTS "${PROJECT_SOURCE_DIR}/lib/${SUBMODULE}/CMakeLists.txt")
-        message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
-    endif()
-endforeach()
+set(TEST_NAME SBM_Test)
 
 # Define a preprocessor definition with the PNG output directory
 add_compile_definitions(TEST_OUTPUT_DIRECTORY="${TEST_OUTPUT_DIRECTORY}")
@@ -55,14 +20,12 @@ add_compile_definitions(CONFIG_DIRECTORY="${CONFIG_DIRECTORY}")
 # Collect all source files in the src and lib directories
 file(GLOB SRC_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 list(REMOVE_ITEM SRC_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
-file(GLOB LIB_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/*.cpp)
 file(GLOB UTILS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/utils/*.cpp)
 file(GLOB TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp)
 
 # Combine all source files into one list
 set(COMMON_SOURCES
     ${SRC_SOURCES}
-    ${LIB_SOURCES}
     ${UTILS_SOURCES}
 )
 
@@ -73,18 +36,39 @@ pkg_check_modules(GRAPHVIZ REQUIRED libgvc libcdt)
 # Include Graphviz directories
 include_directories(${GRAPHVIZ_INCLUDE_DIRS})
 
+include(FetchContent)
+
 # Add external libraries
-add_subdirectory(lib/json)
-# add_subdirectory(lib/googletest)
-add_subdirectory(lib/ortools)
+FetchContent_Declare(
+    json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.11.3
+)
+
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG v1.15.2
+)
+
+FetchContent_Declare(
+    ortools
+    GIT_REPOSITORY https://github.com/google/or-tools.git
+    GIT_TAG v9.11
+)
+
+# Enable fetching dependencies for OR-Tools
+set(BUILD_DEPS ON CACHE BOOL "Fetch and build all dependencies for OR-Tools")
+
+FetchContent_MakeAvailable(json googletest ortools)
 
 # Add executable target with source files
 add_executable(${LIBRARY_NAME} src/main.cpp ${COMMON_SOURCES})
 add_executable(${TEST_NAME} ${TEST_SOURCES} ${COMMON_SOURCES})
 
 # Link Graphviz libraries to your executable
-target_link_libraries(${LIBRARY_NAME} ortools::ortools ${GRAPHVIZ_LIBRARIES})
-target_link_libraries(${TEST_NAME} ortools::ortools gtest gtest_main ${GRAPHVIZ_LIBRARIES})
+target_link_libraries(${LIBRARY_NAME} nlohmann_json ortools::ortools ${GRAPHVIZ_LIBRARIES})
+target_link_libraries(${TEST_NAME} nlohmann_json ortools::ortools gtest gtest_main ${GRAPHVIZ_LIBRARIES})
 
 # Include directories for the library
 set(COMMON_INCLUDED_DIRECTORIES
@@ -95,8 +79,6 @@ set(COMMON_INCLUDED_DIRECTORIES
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/StreamBP>
     $<INSTALL_INTERFACE:/include/StreamBP>
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/lib/json/single_include
-    ${CMAKE_CURRENT_SOURCE_DIR}/lib/ortools
 )
 
 # Include common libraries listed above
@@ -108,9 +90,6 @@ target_include_directories(${LIBRARY_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
-
-# Include googletest library
-# target_include_directories(${TEST_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/googletest/googletest/include)
 
 # Set up testing
 enable_testing()

@@ -57,9 +57,6 @@ check_and_install pkg-config
 check_and_install libgraphviz-dev
 check_and_install cmake
 
-# Initialize and update git submodules
-git submodule update --init --recursive
-
 # Create build directory if it doesn't exist
 mkdir -p build
 
