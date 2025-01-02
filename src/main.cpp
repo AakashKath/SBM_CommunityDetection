@@ -3,6 +3,7 @@
 #include "dynamic_community_detection.h"
 #include "belief_propagation.h"
 #include "approximate_community_detection.h"
+#include "ip_solver.h"
 
 using namespace std;
 
@@ -70,10 +71,12 @@ int main(int argc, char* argv[]) {
         }
         acd.acd_graph.draw("predicted_graph.png");
     } else if (gs.algorithm_number == 4) {
-        for (const auto& edge: gs.addedEdges) {
-            gs.sbm.sbm_graph.addUndirectedEdge(edge.first, edge.second);
+        IPSolver ip_solver(gs.sbm.sbm_graph, gs.addedEdges, gs.removedEdges);
+        unordered_map<int, int> predicted_labels = ip_solver.ip_graph.getLabels();
+        for (const auto& label: predicted_labels) {
+            cout << "Node: " << label.first << " Community: " << label.second << endl;
         }
-        solve_ilp(gs.sbm.sbm_graph);
+        ip_solver.ip_graph.draw("predicted_graph.png");
     }
 
     return 0;

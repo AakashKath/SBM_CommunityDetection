@@ -5,11 +5,9 @@
 #include <cmath>
 #include "heap_and_map.h"
 #include "src/graph.h"
-#include "ortools/linear_solver/linear_solver.h"
 #include <unordered_set>
 
 using namespace std;
-using namespace operations_research;
 
 
 class Community {
@@ -31,6 +29,5 @@ double newmansModularity(const Graph& graph);
 double modularityContributionByCommunity(const Community& comm, int total_edges);
 double getModularity(int e_in, int e_out, int total_edges);
 double newmansModularity_(const Graph& graph, bool useSplitPenality = false, bool useDensity = false);
-void solve_ilp(const Graph& graph);
 
 #endif // UTILITIES_H
