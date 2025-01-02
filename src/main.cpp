@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
         }
         acd.acd_graph.draw("predicted_graph.png");
     } else if (gs.algorithm_number == 4) {
-        IPSolver ip_solver(gs.sbm.sbm_graph, gs.addedEdges, gs.removedEdges);
+        IPSolver ip_solver(gs.sbm.sbm_graph, gs.sbm.numberCommunities, gs.addedEdges, gs.removedEdges);
         unordered_map<int, int> predicted_labels = ip_solver.ip_graph.getLabels();
         for (const auto& label: predicted_labels) {
             cout << "Node: " << label.first << " Community: " << label.second << endl;
