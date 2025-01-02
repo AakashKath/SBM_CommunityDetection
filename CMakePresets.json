@@ -29,7 +29,7 @@
         {
             "name": "default",
             "configurePreset": "default",
-            "cleanFirst": true,
+            "cleanFirst": false,
             "jobs": 8
         }
     ],
