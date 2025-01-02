@@ -12,6 +12,7 @@ IPSolver::IPSolver(
     // Add edges
     for (const auto& [src_id, dest_id]: addedEdges) {
         ip_graph.addUndirectedEdge(src_id, dest_id);
+        total_edges += 1;
     }
 
     // Solve the ILP
