@@ -19,7 +19,12 @@ class IPSolver {
     private:
         int total_edges;
 
-        void solve_ilp();
+        void solveIP();
+        void addReflexivityConstraints(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv);
+        void addSymmetryConstraints(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv);
+        void addTransitivityConstraints(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv);
+        MPObjective* const addObjective(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv);
+        void updateNodeLabels(unordered_map<string, MPVariable*>& Xuv);
 };
 
 #endif // IP_SOLVER_H

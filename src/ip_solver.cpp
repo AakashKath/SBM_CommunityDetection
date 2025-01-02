@@ -16,14 +16,19 @@ IPSolver::IPSolver(
     }
 
     // Solve the ILP
-    solve_ilp();
+    solveIP();
 }
 
 IPSolver::~IPSolver() {
     // Nothing to clean
 }
 
-void IPSolver::solve_ilp() {
+void IPSolver::solveIP() {
+    if (total_edges == 0) {
+        cerr << "SolveILP: No edges in the graph." << endl;
+        return;
+    }
+
     // Create the solver
     unique_ptr<MPSolver> solver(MPSolver::CreateSolver("CBC"));
     if (!solver) {
@@ -39,12 +44,33 @@ void IPSolver::solve_ilp() {
         }
     }
 
+    addReflexivityConstraints(solver.get(), Xuv);
+    addSymmetryConstraints(solver.get(), Xuv);
+    addTransitivityConstraints(solver.get(), Xuv);
+    MPObjective* const objective = addObjective(solver.get(), Xuv);
+
+    // Solve the ILP
+    const MPSolver::ResultStatus result_status = solver->Solve();
+
+    // Mapping node to cluster
+    if (result_status == MPSolver::OPTIMAL) {
+        cout << "Optimal solution found!" << endl;
+        updateNodeLabels(Xuv);
+        cout << "Maximum modularity: " << objective->Value() << endl;
+    } else {
+        cout << "No optimal solution found." << endl;
+    }
+}
+
+void IPSolver::addReflexivityConstraints(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv) {
     // Constraints: Reflexivity
     for (const auto& node: ip_graph.nodes) {
         auto constraint = solver->MakeRowConstraint(1.0, 1.0);
         constraint->SetCoefficient(Xuv[to_string(node->id) + "_" + to_string(node->id)], 1.0);
     }
+}
 
+void IPSolver::addSymmetryConstraints(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv) {
     // Constraints: Symmetry
     for (int i = 0; i < ip_graph.nodes.size(); ++i) {
         for (int j = i + 1; j < ip_graph.nodes.size(); ++j) {
@@ -53,7 +79,9 @@ void IPSolver::solve_ilp() {
             constraint->SetCoefficient(Xuv[to_string(ip_graph.nodes[j]->id) + "_" + to_string(ip_graph.nodes[i]->id)], -1.0);
         }
     }
+}
 
+void IPSolver::addTransitivityConstraints(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv) {
     // Constraints: Transitivity
     for (int i = 0; i < ip_graph.nodes.size(); ++i) {
         for (int j = i + 1; j < ip_graph.nodes.size(); ++j) {
@@ -65,13 +93,10 @@ void IPSolver::solve_ilp() {
             }
         }
     }
+}
 
-    if (total_edges == 0) {
-        cerr << "SolveILP: No edges in the graph." << endl;
-        return;
-    }
-
-    // Define the objective: Maximize the total weight of selected vertices
+MPObjective* const IPSolver::addObjective(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv) {
+    // Objective function
     MPObjective* const objective = solver->MutableObjective();
     for (const auto& node1: ip_graph.nodes) {
         for (const auto& node2: ip_graph.nodes) {
@@ -89,32 +114,28 @@ void IPSolver::solve_ilp() {
     }
     objective->SetMaximization();
 
-    // Solve the ILP
-    const MPSolver::ResultStatus result_status = solver->Solve();
+    return objective;
+}
+
+void IPSolver::updateNodeLabels(unordered_map<string, MPVariable*>& Xuv) {
+    // Cluster identifier
+    int clusterId = 0;
 
     // Mapping node to cluster
     unordered_map<int, int> nodeToCluster{};
-    if (result_status == MPSolver::OPTIMAL) {
-        int clusterId = 0;  // Cluster identifier
-
-        cout << "Optimal solution found!" << endl;
-        for (const auto& node1: ip_graph.nodes) {
-            for (const auto& node2: ip_graph.nodes) {
-                if (Xuv[to_string(node1->id) + "_" + to_string(node2->id)]->solution_value() == 1.0) {
-                    // If node1 is not assigned to any cluster, assign it to a new cluster
-                    if (nodeToCluster.find(node1->id) == nodeToCluster.end()) {
-                        nodeToCluster[node1->id] = clusterId++;
-                    }
-                    // Assign node2 to the same cluster as node1
-                    if (nodeToCluster.find(node2->id) == nodeToCluster.end()) {
-                        nodeToCluster[node2->id] = nodeToCluster[node1->id];
-                    }
+    for (const auto& node1: ip_graph.nodes) {
+        for (const auto& node2: ip_graph.nodes) {
+            if (Xuv[to_string(node1->id) + "_" + to_string(node2->id)]->solution_value() == 1.0) {
+                // If node1 is not assigned to any cluster, assign it to a new cluster
+                if (nodeToCluster.find(node1->id) == nodeToCluster.end()) {
+                    nodeToCluster[node1->id] = clusterId++;
+                }
+                // Assign node2 to the same cluster as node1
+                if (nodeToCluster.find(node2->id) == nodeToCluster.end()) {
+                    nodeToCluster[node2->id] = nodeToCluster[node1->id];
                 }
             }
         }
-        cout << "Maximum modularity: " << objective->Value() << endl;
-    } else {
-        cout << "No optimal solution found." << endl;
     }
 
     // Assign the cluster labels to the nodes
