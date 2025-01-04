@@ -32,7 +32,7 @@ void IPSolver::solveIP() {
     }
 
     // Create the solver
-    unique_ptr<MPSolver> solver(MPSolver::CreateSolver("CBC"));
+    unique_ptr<MPSolver> solver(MPSolver::CreateSolver("SCIP"));
     if (!solver) {
         cerr << "Solver not available." << endl;
         return;
@@ -46,19 +46,20 @@ void IPSolver::solveIP() {
         }
     }
 
-    // Decision variables Zuk, for defining community constraints
-    unordered_map<string, MPVariable*> Zuk;
-    for (const auto& node : ip_graph.nodes) {
-        for (int k = 0; k < numberCommunities; ++k) {
-            Zuk[to_string(node->id) + "_" + to_string(k)] = solver->MakeIntVar(0.0, 1.0, "Z" + to_string(node->id) + "_" + to_string(k));
-        }
+    int number_of_threads = thread::hardware_concurrency();
+
+    absl::Status status = solver->SetNumThreads(number_of_threads);
+    if (status.ok()) {
+        cout << "Number of threads set to " << number_of_threads << "." << endl;
+    } else {
+        cout << "Number of threads not set." << endl;
     }
 
     // Add constraints
     addReflexivityConstraints(solver.get(), Xuv);
     addSymmetryConstraints(solver.get(), Xuv);
     addTransitivityConstraints(solver.get(), Xuv);
-    addCommunityConstraints(solver.get(), Xuv, Zuk);
+    addCommunityConstraints(solver.get(), Xuv);
 
     // Objective function
     MPObjective* const objective = addObjective(solver.get(), Xuv);
@@ -122,36 +123,24 @@ void IPSolver::addTransitivityConstraints(MPSolver* solver, unordered_map<string
     }
 }
 
-void IPSolver::addCommunityConstraints(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv, unordered_map<string, MPVariable*>& Zuk) {
-    int numberNodesPerCommunity = ip_graph.nodes.size() / numberCommunities;
+void IPSolver::addCommunityConstraints(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv) {
+    int number_nodes = ip_graph.nodes.size();
+    int number_nodes_per_community = number_nodes / numberCommunities;
+    double min_clique_edges = static_cast<double>(number_nodes * (number_nodes_per_community - 1)) / 2.0;
 
-    // Constraint: Each node belongs to exactly one community
-    for (const auto& node : ip_graph.nodes) {
-        auto constraint = solver->MakeRowConstraint(1.0, 1.0);
-        for (int k = 0; k < numberCommunities; ++k) {
-            constraint->SetCoefficient(Zuk[to_string(node->id) + "_" + to_string(k)], 1.0);
+    // Constraint: Sum of all Xuv should be equal to the minimum number of edges if each community were to be assumed a clique
+    auto constraint = solver->MakeRowConstraint(min_clique_edges, min_clique_edges);
+    for (int i = 0; i < number_nodes; ++i) {
+        for (int j = i + 1; j < number_nodes; ++j) {
+            constraint->SetCoefficient(Xuv[to_string(ip_graph.nodes[i]->id) + "_" + to_string(ip_graph.nodes[j]->id)], 1.0);
         }
     }
 
-    // Constraint: All communities should have the same size
-    for (int k = 0; k < numberCommunities; ++k) {
-        auto constraint = solver->MakeRowConstraint(numberNodesPerCommunity, numberNodesPerCommunity);
-        for (const auto& node : ip_graph.nodes) {
-            constraint->SetCoefficient(Zuk[to_string(node->id) + "_" + to_string(k)], 1.0);
-        }
-    }
-
-    // Constraint: Relation between Xuv and Zuk
-    for (const auto& node1 : ip_graph.nodes) {
-        for (const auto& node2 : ip_graph.nodes) {
-            if (node1->id < node2->id) {
-                for (int k = 0; k < numberCommunities; ++k) {
-                    auto constraint = solver->MakeRowConstraint(-MPSolver::infinity(), 1.0);
-                    constraint->SetCoefficient(Xuv[to_string(node1->id) + "_" + to_string(node2->id)], 1.0);
-                    constraint->SetCoefficient(Zuk[to_string(node1->id) + "_" + to_string(k)], -1.0);
-                    constraint->SetCoefficient(Zuk[to_string(node2->id) + "_" + to_string(k)], -1.0);
-                }
-            }
+    // Constraint: Sum of Xuv for a fixed u is equal to the number of nodes in the community
+    for (const auto& node1: ip_graph.nodes) {
+        constraint = solver->MakeRowConstraint(number_nodes_per_community, number_nodes_per_community);
+        for (const auto& node2: ip_graph.nodes) {
+            constraint->SetCoefficient(Xuv[to_string(node1->id) + "_" + to_string(node2->id)], 1.0);
         }
     }
 }

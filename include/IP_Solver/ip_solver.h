@@ -3,6 +3,7 @@
 
 #include "src/graph.h"
 #include "ortools/linear_solver/linear_solver.h"
+#include <thread>
 
 using namespace std;
 using namespace operations_research;
@@ -24,7 +25,7 @@ class IPSolver {
         void addReflexivityConstraints(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv);
         void addSymmetryConstraints(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv);
         void addTransitivityConstraints(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv);
-        void addCommunityConstraints(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv, unordered_map<string, MPVariable*>& Zuk);
+        void addCommunityConstraints(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv);
         MPObjective* const addObjective(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv);
         void updateNodeLabels(unordered_map<string, MPVariable*>& Xuv);
 };
