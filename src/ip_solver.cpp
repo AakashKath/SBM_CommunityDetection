@@ -126,19 +126,10 @@ void IPSolver::addTransitivityConstraints(MPSolver* solver, unordered_map<string
 void IPSolver::addCommunityConstraints(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv) {
     int number_nodes = ip_graph.nodes.size();
     int number_nodes_per_community = number_nodes / numberCommunities;
-    double min_clique_edges = static_cast<double>(number_nodes * (number_nodes_per_community - 1)) / 2.0;
-
-    // Constraint: Sum of all Xuv should be equal to the minimum number of edges if each community were to be assumed a clique
-    auto constraint = solver->MakeRowConstraint(min_clique_edges, min_clique_edges);
-    for (int i = 0; i < number_nodes; ++i) {
-        for (int j = i + 1; j < number_nodes; ++j) {
-            constraint->SetCoefficient(Xuv[to_string(ip_graph.nodes[i]->id) + "_" + to_string(ip_graph.nodes[j]->id)], 1.0);
-        }
-    }
 
     // Constraint: Sum of Xuv for a fixed u is equal to the number of nodes in the community
     for (const auto& node1: ip_graph.nodes) {
-        constraint = solver->MakeRowConstraint(number_nodes_per_community, number_nodes_per_community);
+        auto constraint = solver->MakeRowConstraint(number_nodes_per_community, number_nodes_per_community);
         for (const auto& node2: ip_graph.nodes) {
             constraint->SetCoefficient(Xuv[to_string(node1->id) + "_" + to_string(node2->id)], 1.0);
         }
