@@ -92,7 +92,7 @@ generated_sequence generateSequence(string filename) {
     }
 
     Sbm sbm(nodes, communities, intra_community_edge_probability, inter_community_edge_probability);
-    sbm.sbm_graph.draw(resultDirectory + string("/original_graph.png"));
+    sbm.sbm_graph.draw(TEST_OUTPUT_DIRECTORY + string("/original_graph.png"));
 
     vector<pair<int, int>> addedEdges{};
     for (int i = 0; i < edges; ++i) {

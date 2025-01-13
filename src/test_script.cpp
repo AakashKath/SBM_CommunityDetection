@@ -10,7 +10,7 @@ vector<string> splitString(const string& str, char delimiter) {
     return tokens;
 }
 
-void run_test_script() {
+void run_test_script(bool draw_graphs) {
     // Run the test script
     if (!filesystem::exists(TEST_DATA_DIRECTORY) || !filesystem::is_directory(TEST_DATA_DIRECTORY)) {
         cerr << "Test data directory not found. Please check the path." << endl;
@@ -64,8 +64,24 @@ void run_test_script() {
         // Not using removed edges for now
         vector<pair<int, int>> removedEdges{};
 
-        sbm.sbm_graph.draw(result_directory + string("/original.png"));
+        if (draw_graphs) {
+            sbm.sbm_graph.draw(result_directory + string("/original.png"));
+        }
+        ofstream outfile(result_directory + string("/results.txt"));
+        ofstream errorfile(result_directory + string("/errors.txt"));
 
+        bool include_dcd = false;
+        bool include_streambp = false;
+        bool include_acd = false;
+        bool include_ilp = false;
+        DynamicCommunityDetection* dcd = nullptr;
+        BeliefPropagation* bp = nullptr;
+        ApproximateCommunityDetection* acd = nullptr;
+        IPSolver* ip_solver = nullptr;
+        chrono::duration<double, milli> dcd_duration;
+        chrono::duration<double, milli> streambp_duration;
+        chrono::duration<double, milli> acd_duration;
+        chrono::duration<double, milli> ilp_duration;
         chrono::high_resolution_clock::time_point start_time;
         chrono::high_resolution_clock::time_point end_time;
         unordered_map<int, set<int>> community_to_node_mapping = sbm.sbm_graph.getCommunities();
@@ -76,40 +92,65 @@ void run_test_script() {
         }
 
         // Run algorithms
-        start_time = chrono::high_resolution_clock::now();
-        DynamicCommunityDetection dcd(sbm.sbm_graph, sbm.numberCommunities, addedEdges, removedEdges);
-        end_time = chrono::high_resolution_clock::now();
-        chrono::duration<double, milli> dcd_duration = end_time - start_time;
-        dcd.c_ll.draw(result_directory + string("/dcd.png"));
+        try {
+            start_time = chrono::high_resolution_clock::now();
+            dcd = new DynamicCommunityDetection(sbm.sbm_graph, sbm.numberCommunities, addedEdges, removedEdges);
+            end_time = chrono::high_resolution_clock::now();
+            dcd_duration = end_time - start_time;
+            if (draw_graphs) {
+                dcd->c_ll.draw(result_directory + string("/dcd.png"));
+            }
+            include_dcd = true;
+        } catch (const exception& e) {
+            errorfile << "DCD: " << e.what() << endl;
+        }
 
-        start_time = chrono::high_resolution_clock::now();
-        BeliefPropagation bp(
-            sbm.sbm_graph,
-            sbm.numberCommunities,
-            radius,
-            sbm.intraCommunityEdgeProbability,
-            sbm.interCommunityEdgeProbability,
-            addedEdges,
-            removedEdges
-        );
-        end_time = chrono::high_resolution_clock::now();
-        chrono::duration<double, milli> streambp_duration = end_time - start_time;
-        bp.bp_graph.draw(result_directory + string("/streambp.png"));
+        try {
+            start_time = chrono::high_resolution_clock::now();
+            bp = new BeliefPropagation(
+                sbm.sbm_graph,
+                sbm.numberCommunities,
+                radius,
+                sbm.intraCommunityEdgeProbability,
+                sbm.interCommunityEdgeProbability,
+                addedEdges,
+                removedEdges
+            );
+            end_time = chrono::high_resolution_clock::now();
+            streambp_duration = end_time - start_time;
+            if (draw_graphs) {
+                bp->bp_graph.draw(result_directory + string("/streambp.png"));
+            }
+            include_streambp = true;
+        } catch (const exception& e) {
+            errorfile << "StreamBP: " << e.what() << endl;
+        }
 
-        start_time = chrono::high_resolution_clock::now();
-        ApproximateCommunityDetection acd(sbm.sbm_graph, sbm.numberCommunities, addedEdges, removedEdges);
-        end_time = chrono::high_resolution_clock::now();
-        chrono::duration<double, milli> acd_duration = end_time - start_time;
-        acd.acd_graph.draw(result_directory + string("/acd.png"));
+        try {
+            start_time = chrono::high_resolution_clock::now();
+            acd = new ApproximateCommunityDetection(sbm.sbm_graph, sbm.numberCommunities, addedEdges, removedEdges);
+            end_time = chrono::high_resolution_clock::now();
+            acd_duration = end_time - start_time;
+            if (draw_graphs) {
+                acd->acd_graph.draw(result_directory + string("/acd.png"));
+            }
+            include_acd = true;
+        } catch (const exception& e) {
+            errorfile << "ACD: " << e.what() << endl;
+        }
 
-        start_time = chrono::high_resolution_clock::now();
-        IPSolver ip_solver(sbm.sbm_graph, sbm.numberCommunities, addedEdges, removedEdges);
-        end_time = chrono::high_resolution_clock::now();
-        chrono::duration<double, milli> ilp_duration = end_time - start_time;
-        ip_solver.ip_graph.draw(result_directory + string("/ilp.png"));
-
-        // Gather results
-        ofstream outfile(result_directory + string("/results.txt"));
+        try {
+            start_time = chrono::high_resolution_clock::now();
+            ip_solver = new IPSolver(sbm.sbm_graph, sbm.numberCommunities, addedEdges, removedEdges);
+            end_time = chrono::high_resolution_clock::now();
+            ilp_duration = end_time - start_time;
+            if (draw_graphs) {
+                ip_solver->ip_graph.draw(result_directory + string("/ilp.png"));
+            }
+            include_ilp = true;
+        } catch (const exception& e) {
+            errorfile << "ILP: " << e.what() << endl;
+        }
 
         // Print graph details
         outfile << "Number of Nodes: " << sbm.sbm_graph.nodes.size() << endl
@@ -128,45 +169,62 @@ void run_test_script() {
             outfile << endl;
         }
         outfile << endl;
-        outfile << "DCD Communities:" << endl;
-        for (const auto& community_cluster: dcd.c_ll.getCommunities()) {
-            for (const Node& node: community_cluster.second) {
-                outfile << node.id << " ";
+
+        if (include_dcd) {
+            outfile << "DCD Communities:" << endl;
+            for (const auto& community_cluster: dcd->c_ll.getCommunities()) {
+                for (const Node& node: community_cluster.second) {
+                    outfile << node.id << " ";
+                }
+                outfile << endl;
             }
             outfile << endl;
         }
-        outfile << endl;
-        outfile << "StreamBP Communities:" << endl;
-        for (const auto& community_cluster: bp.bp_graph.getCommunities()) {
-            for (const Node& node: community_cluster.second) {
-                outfile << node.id << " ";
+        if (include_streambp) {
+            outfile << "StreamBP Communities:" << endl;
+            for (const auto& community_cluster: bp->bp_graph.getCommunities()) {
+                for (const Node& node: community_cluster.second) {
+                    outfile << node.id << " ";
+                }
+                outfile << endl;
             }
             outfile << endl;
         }
-        outfile << endl;
-        outfile << "ACD Communities:" << endl;
-        for (const auto& community_cluster: acd.acd_graph.getCommunities()) {
-            for (const Node& node: community_cluster.second) {
-                outfile << node.id << " ";
+        if (include_acd) {
+            outfile << "ACD Communities:" << endl;
+            for (const auto& community_cluster: acd->acd_graph.getCommunities()) {
+                for (const Node& node: community_cluster.second) {
+                    outfile << node.id << " ";
+                }
+                outfile << endl;
             }
             outfile << endl;
         }
-        outfile << endl;
-        outfile << "ILP Communities:" << endl;
-        for (const auto& community_cluster: ip_solver.ip_graph.getCommunities()) {
-            for (const Node& node: community_cluster.second) {
-                outfile << node.id << " ";
+        if (include_ilp) {
+            outfile << "ILP Communities:" << endl;
+            for (const auto& community_cluster: ip_solver->ip_graph.getCommunities()) {
+                for (const Node& node: community_cluster.second) {
+                    outfile << node.id << " ";
+                }
+                outfile << endl;
             }
             outfile << endl;
         }
-        outfile << endl;
 
         // Print runtime ranking
         unordered_map<string, double> runtime_ranking;
-        runtime_ranking.emplace("DCD", dcd_duration.count());
-        runtime_ranking.emplace("StreamBP", streambp_duration.count());
-        runtime_ranking.emplace("ACD", acd_duration.count());
-        runtime_ranking.emplace("ILP", ilp_duration.count());
+        if (include_dcd) {
+            runtime_ranking.emplace("DCD", dcd_duration.count());
+        }
+        if (include_streambp) {
+            runtime_ranking.emplace("StreamBP", streambp_duration.count());
+        }
+        if (include_acd) {
+            runtime_ranking.emplace("ACD", acd_duration.count());
+        }
+        if (include_ilp) {
+            runtime_ranking.emplace("ILP", ilp_duration.count());
+        }
         int index = 1;
         outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Runtime (in milliseconds)" << endl;
         for (const auto& rank: runtime_ranking) {
@@ -176,10 +234,18 @@ void run_test_script() {
 
         // Print modularity ranking
         unordered_map<string, double> modularity_ranking;
-        modularity_ranking.emplace("DCD", modularity(dcd.c_ll));
-        modularity_ranking.emplace("StreamBP", modularity(bp.bp_graph));
-        modularity_ranking.emplace("ACD", modularity(acd.acd_graph));
-        modularity_ranking.emplace("ILP", modularity(ip_solver.ip_graph));
+        if (include_dcd) {
+            modularity_ranking.emplace("DCD", modularity(dcd->c_ll));
+        }
+        if (include_streambp) {
+            modularity_ranking.emplace("StreamBP", modularity(bp->bp_graph));
+        }
+        if (include_acd) {
+            modularity_ranking.emplace("ACD", modularity(acd->acd_graph));
+        }
+        if (include_ilp) {
+            modularity_ranking.emplace("ILP", modularity(ip_solver->ip_graph));
+        }
         index = 1;
         outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Modularity Value" << endl;
         for (const auto& rank: modularity_ranking) {
@@ -189,10 +255,18 @@ void run_test_script() {
 
         // Print accuracy ranking
         unordered_map<string, double> accuracy_ranking;
-        accuracy_ranking.emplace("DCD", accuracy(dcd.c_ll, community_partition, outfile, "DCD"));
-        accuracy_ranking.emplace("StreamBP", accuracy(bp.bp_graph, community_partition, outfile, "StreamBP"));
-        accuracy_ranking.emplace("ACD", accuracy(acd.acd_graph, community_partition, outfile, "ACD"));
-        accuracy_ranking.emplace("ILP", accuracy(ip_solver.ip_graph, community_partition, outfile, "ILP"));
+        if (include_dcd) {
+            accuracy_ranking.emplace("DCD", accuracy(dcd->c_ll, community_partition, outfile, "DCD"));
+        }
+        if (include_streambp) {
+            accuracy_ranking.emplace("StreamBP", accuracy(bp->bp_graph, community_partition, outfile, "StreamBP"));
+        }
+        if (include_acd) {
+            accuracy_ranking.emplace("ACD", accuracy(acd->acd_graph, community_partition, outfile, "ACD"));
+        }
+        if (include_ilp) {
+            accuracy_ranking.emplace("ILP", accuracy(ip_solver->ip_graph, community_partition, outfile, "ILP"));
+        }
         index = 1;
         outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Accuracy" << endl;
         for (const auto& rank: accuracy_ranking) {
@@ -202,10 +276,18 @@ void run_test_script() {
 
         // Print max jaccard sum ranking
         unordered_map<string, double> jaccard_sum;
-        jaccard_sum.emplace("DCD", maxJaccardSum(dcd.c_ll, community_partition, outfile, "DCD"));
-        jaccard_sum.emplace("StreamBP", maxJaccardSum(bp.bp_graph, community_partition, outfile, "StreamBP"));
-        jaccard_sum.emplace("ACD", maxJaccardSum(acd.acd_graph, community_partition, outfile, "ACD"));
-        jaccard_sum.emplace("ILP", maxJaccardSum(ip_solver.ip_graph, community_partition, outfile, "ILP"));
+        if (include_dcd) {
+            jaccard_sum.emplace("DCD", maxJaccardSum(dcd->c_ll, community_partition, outfile, "DCD"));
+        }
+        if (include_streambp) {
+            jaccard_sum.emplace("StreamBP", maxJaccardSum(bp->bp_graph, community_partition, outfile, "StreamBP"));
+        }
+        if (include_acd) {
+            jaccard_sum.emplace("ACD", maxJaccardSum(acd->acd_graph, community_partition, outfile, "ACD"));
+        }
+        if (include_ilp) {
+            jaccard_sum.emplace("ILP", maxJaccardSum(ip_solver->ip_graph, community_partition, outfile, "ILP"));
+        }
         index = 1;
         outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Max Jaccard Sum" << endl;
         for (const auto& rank: jaccard_sum) {

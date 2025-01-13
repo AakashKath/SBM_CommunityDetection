@@ -12,7 +12,7 @@
 
 using namespace std;
 
-void run_test_script();
+void run_test_script(bool draw_graphs = false);
 vector<string> splitString(const string& str, char delimiter);
 
 #endif // TEST_SCRIPT_H
