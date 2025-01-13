@@ -86,8 +86,8 @@ class InitConf : public ::testing::Test {
             chrono::duration<double, milli> bp_duration = bp_end - bp_start;
 
             // Draw predicted graphs
-            bp->bp_graph.draw(gs.resultDirectory + string("/bp_graph.png"));
-            dcd->c_ll.draw(gs.resultDirectory + string("/dcd.png"));
+            bp->bp_graph.draw(TEST_OUTPUT_DIRECTORY + gs.resultDirectory + string("/bp_graph.png"));
+            dcd->c_ll.draw(TEST_OUTPUT_DIRECTORY + gs.resultDirectory + string("/dcd.png"));
 
             outfile.open(TEST_OUTPUT_DIRECTORY + gs.resultDirectory + string("/results.txt"));
 

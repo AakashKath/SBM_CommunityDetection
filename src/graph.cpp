@@ -118,10 +118,7 @@ Graph& Graph::operator=(const Graph& other) {
     return *this;
 }
 
-void Graph::draw(const string &filename) {
-    // Create filepath
-    string filepath = TEST_OUTPUT_DIRECTORY + filename;
-
+void Graph::draw(const string &filepath) {
     // Create a new graph
     Agraph_t *g = agopen(const_cast<char*>("g"), Agundirected, NULL);
 

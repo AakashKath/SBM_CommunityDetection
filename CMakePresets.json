@@ -21,7 +21,8 @@
                 "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/lib/",
                 "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/lib/",
                 "TEST_OUTPUT_DIRECTORY": "${sourceDir}/test_results/",
-                "CONFIG_DIRECTORY": "${sourceDir}/config/"
+                "CONFIG_DIRECTORY": "${sourceDir}/config/",
+                "TEST_DATA_DIRECTORY": "${sourceDir}/test_data/"
             }
         }
     ],

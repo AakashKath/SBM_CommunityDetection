@@ -72,7 +72,7 @@ double jaccardIndex(const set<int>& set1, const set<int>& set2) {
 }
 
 // Function to compute the maximum sum of Jaccard Indices over all permutations
-double maxJaccardSum(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile) {
+double maxJaccardSum(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile, string title) {
     double maxSum = 0.0;
     unordered_map<int, set<int>> predicted_labels = graph.getCommunities();
 
@@ -115,7 +115,7 @@ double maxJaccardSum(const Graph& graph, vector<set<int>> original_partition, of
         maxSum += best_pair_score;
     }
 
-    outfile << "Original Partition vs Predicted Partition" << endl;
+    outfile << "JaccardSum Difference: Original Partition vs " << title << " Partition" << endl;
     for (const auto& jaccard_pair: jaccard_index_pairs) {
         // Print original_partition and matched predicted_partition set for clarity
         outfile << "{";
@@ -332,7 +332,7 @@ double embeddedness(const Graph& graph) {
     return total_embeddedness;
 }
 
-double accuracy(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile) {
+double accuracy(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile, string title) {
     int correct_count = 0;
     unordered_map<int, set<int>> predicted_labels = graph.getCommunities();
     // Convert map values to a vector of sets
@@ -390,8 +390,10 @@ double accuracy(const Graph& graph, vector<set<int>> original_partition, ofstrea
         );
         node_movement += difference.size();
     }
-    outfile << "Number of node to be moved: " << node_movement << endl;
-    outfile << "Ratio of node to be moved w.r.t. total nodes: " << static_cast<double>(node_movement) / graph.nodes.size() << endl;
+    if (title != "") {
+        outfile << title << " :: ";
+    }
+    outfile << "Number of node out of place: " << node_movement << endl;
 
     return static_cast<double>(correct_count) / graph.nodes.size();
 }

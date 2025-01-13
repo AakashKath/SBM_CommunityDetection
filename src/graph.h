@@ -46,7 +46,7 @@ class Graph {
         vector<unique_ptr<Node>> nodes;
         unordered_map<int, size_t> id_to_index_mapping;
 
-        void draw(const string &filename);
+        void draw(const string &filepath);
         string getEdgeColor(int srcLabel, int destLabel);
         string getNodeColor(int nodeLabel);
         int getTotalEdges() const;
