@@ -332,7 +332,7 @@ double embeddedness(const Graph& graph) {
     return total_embeddedness;
 }
 
-double accuracy(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile, string title) {
+double setDifferenceAccuracy(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile, string title) {
     int correct_count = 0;
     unordered_map<int, set<int>> predicted_labels = graph.getCommunities();
     // Convert map values to a vector of sets
@@ -355,7 +355,7 @@ double accuracy(const Graph& graph, vector<set<int>> original_partition, ofstrea
         size_t best_original_index = 0;
         size_t best_predicted_index = 0;
 
-        // Find the best pair based on accuracy
+        // Find the best pair based on set difference accuracy
         for (size_t i = 0; i < original_partition.size(); ++i) {
             for (size_t j = 0; j < predicted_partition.size(); ++j) {
                 vector<int> intersection;
@@ -396,4 +396,19 @@ double accuracy(const Graph& graph, vector<set<int>> original_partition, ofstrea
     outfile << "Number of node out of place: " << node_movement << endl;
 
     return static_cast<double>(correct_count) / graph.nodes.size();
+}
+
+double edgeClassificationAccuracy(Graph& predicted_graph, Graph& original_graph) {
+    int weighted_correct_count = 0;
+    for (const auto& node: predicted_graph.nodes) {
+        for (const auto& edge: node->edgeList) {
+            int original_src_label = original_graph.getNode(node->id)->label;
+            int original_dest_label = original_graph.getNode(edge.first->id)->label;
+            if ((original_src_label == original_dest_label && node->label == edge.first->label) || (original_src_label != original_dest_label && node->label != edge.first->label)) {
+                weighted_correct_count += edge.second;
+            }
+        }
+    }
+
+    return static_cast<double>(weighted_correct_count) / (2.0 * predicted_graph.getTotalEdges());
 }

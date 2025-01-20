@@ -253,23 +253,23 @@ void run_test_script(bool draw_graphs) {
         }
         outfile << endl;
 
-        // Print accuracy ranking
-        unordered_map<string, double> accuracy_ranking;
+        // Print set difference accuracy ranking
+        unordered_map<string, double> set_difference_accuracy_ranking;
         if (include_dcd) {
-            accuracy_ranking.emplace("DCD", accuracy(dcd->c_ll, community_partition, outfile, "DCD"));
+            set_difference_accuracy_ranking.emplace("DCD", setDifferenceAccuracy(dcd->c_ll, community_partition, outfile, "DCD"));
         }
         if (include_streambp) {
-            accuracy_ranking.emplace("StreamBP", accuracy(bp->bp_graph, community_partition, outfile, "StreamBP"));
+            set_difference_accuracy_ranking.emplace("StreamBP", setDifferenceAccuracy(bp->bp_graph, community_partition, outfile, "StreamBP"));
         }
         if (include_acd) {
-            accuracy_ranking.emplace("ACD", accuracy(acd->acd_graph, community_partition, outfile, "ACD"));
+            set_difference_accuracy_ranking.emplace("ACD", setDifferenceAccuracy(acd->acd_graph, community_partition, outfile, "ACD"));
         }
         if (include_ilp) {
-            accuracy_ranking.emplace("ILP", accuracy(ip_solver->ip_graph, community_partition, outfile, "ILP"));
+            set_difference_accuracy_ranking.emplace("ILP", setDifferenceAccuracy(ip_solver->ip_graph, community_partition, outfile, "ILP"));
         }
         index = 1;
         outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Accuracy" << endl;
-        for (const auto& rank: accuracy_ranking) {
+        for (const auto& rank: set_difference_accuracy_ranking) {
             outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
         }
         outfile << endl;
@@ -293,5 +293,26 @@ void run_test_script(bool draw_graphs) {
         for (const auto& rank: jaccard_sum) {
             outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
         }
+
+        // Print edge classification accuracy ranking
+        unordered_map<string, double> edge_classification_accuracy_ranking;
+        if (include_dcd) {
+            edge_classification_accuracy_ranking.emplace("DCD", edgeClassificationAccuracy(dcd->c_ll, sbm.sbm_graph));
+        }
+        if (include_streambp) {
+            edge_classification_accuracy_ranking.emplace("StreamBP", edgeClassificationAccuracy(bp->bp_graph, sbm.sbm_graph));
+        }
+        if (include_acd) {
+            edge_classification_accuracy_ranking.emplace("ACD", edgeClassificationAccuracy(acd->acd_graph, sbm.sbm_graph));
+        }
+        if (include_ilp) {
+            edge_classification_accuracy_ranking.emplace("ILP", edgeClassificationAccuracy(ip_solver->ip_graph, sbm.sbm_graph));
+        }
+        index = 1;
+        outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Accuracy" << endl;
+        for (const auto& rank: edge_classification_accuracy_ranking) {
+            outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
+        }
+        outfile << endl;
     }
 }

@@ -277,20 +277,20 @@ TEST_F(InitConf, EmbeddednessTest) {
 }
 
 // Also called MoveTest, determines minimum number of nodes that needs to moved to different community to get same partition
-TEST_F(InitConf, AccuracyTest) {
-    unordered_map<string, double> accuracy_ranking;
-    accuracy_ranking.emplace("DCD", accuracy(dcd->c_ll, community_partition, outfile));
-    accuracy_ranking.emplace("StreamBP", accuracy(bp->bp_graph, community_partition, outfile));
+TEST_F(InitConf, SetDifferenceAccuracyTest) {
+    unordered_map<string, double> set_difference_accuracy_ranking;
+    set_difference_accuracy_ranking.emplace("DCD", setDifferenceAccuracy(dcd->c_ll, community_partition, outfile));
+    set_difference_accuracy_ranking.emplace("StreamBP", setDifferenceAccuracy(bp->bp_graph, community_partition, outfile));
 
-    EXPECT_GT(accuracy_ranking.size(), 0);
-    for (const auto& rank: accuracy_ranking) {
+    EXPECT_GT(set_difference_accuracy_ranking.size(), 0);
+    for (const auto& rank: set_difference_accuracy_ranking) {
         EXPECT_TRUE((rank.second >= 0.0) && (rank.second <= 1.0));
     }
 
     // Print the ranking
     int index = 1;
-    outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Accuracy" << endl;
-    for (const auto& rank: accuracy_ranking) {
+    outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Set Difference Accuracy" << endl;
+    for (const auto& rank: set_difference_accuracy_ranking) {
         outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
     }
 }
@@ -311,6 +311,25 @@ TEST_F(InitConf, JaccardSumTest) {
     int index = 1;
     outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Max Jaccard Sum" << endl;
     for (const auto& rank: jaccard_sum) {
+        outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
+    }
+}
+
+// Get ratio of correctly classified (intra or inter community) edges to total edges
+TEST_F(InitConf, EdgeClassificationAccuracyTest) {
+    unordered_map<string, double> edge_classification_accuracy_ranking;
+    edge_classification_accuracy_ranking.emplace("DCD", edgeClassificationAccuracy(dcd->c_ll, original_graph));
+    edge_classification_accuracy_ranking.emplace("StreamBP", edgeClassificationAccuracy(bp->bp_graph, original_graph));
+
+    EXPECT_GT(edge_classification_accuracy_ranking.size(), 0);
+    for (const auto& rank: edge_classification_accuracy_ranking) {
+        EXPECT_TRUE((rank.second >= 0.0) && (rank.second <= 1.0));
+    }
+
+    // Print the ranking
+    int index = 1;
+    outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Edge Classification Accuracy" << endl;
+    for (const auto& rank: edge_classification_accuracy_ranking) {
         outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
     }
 }
