@@ -11,6 +11,7 @@
 #include <cmath>
 #include <numeric>
 #include <algorithm>
+#include "utils/hungarian_algorithm.h"
 
 using namespace std;
 
@@ -26,5 +27,6 @@ vector<size_t> get_cpu_times();
 double nodeOverlapAccuracy(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile, string title = "");
 double maxJaccardSum(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile, string title = "Predicted");
 double edgeClassificationAccuracy(Graph& predicted_graph, Graph& original_graph);
+double maximalMatchingAccuracy(Graph& predicted_graph, Graph& original_graph, ofstream& outfile, string title = "Predicted");
 
 #endif // QUALITY_MEASURES_H

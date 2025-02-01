@@ -12,7 +12,7 @@ HungarianAlgorithm::~HungarianAlgorithm() {
 }
 
 // Solves the assignment problem and returns the minimum cost
-int HungarianAlgorithm::solveAssignmentProblem() {
+int HungarianAlgorithm::solveAssignmentProblem(vector<int> &assignment) {
     int totalCost = 0;
     matches = 0;
     matchX = vector<int>(size, -1);
@@ -25,7 +25,9 @@ int HungarianAlgorithm::solveAssignmentProblem() {
         totalCost += costMatrix[worker][matchX[worker]];
     }
 
-    printMatching();
+    for (int i = 0; i < size; i++) {
+        assignment.push_back(matchX[i]);
+    }
 
     return totalCost;
 }
@@ -186,11 +188,4 @@ void HungarianAlgorithm::updateMatching(int worker, int job) {
         current_worker = parent[current_worker];
         current_job = tempY;
     } while (current_worker != -2);
-}
-
-void HungarianAlgorithm::printMatching() {
-    cout << "Worker-to-Job Matching:\n";
-    for (int i = 0; i < size; i++) {
-        cout << "Worker " << i << " -> Job " << matchX[i] << endl;
-    }
 }

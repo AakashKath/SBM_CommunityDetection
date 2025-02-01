@@ -333,3 +333,22 @@ TEST_F(InitConf, EdgeClassificationAccuracyTest) {
         outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
     }
 }
+
+// Get ratio of correctly classified (intra or inter community) edges to total edges
+TEST_F(InitConf, MaximalMatchingAccuracyTest) {
+    unordered_map<string, double> maximal_matching_accuracy_ranking;
+    maximal_matching_accuracy_ranking.emplace("DCD", maximalMatchingAccuracy(dcd->c_ll, original_graph, outfile));
+    maximal_matching_accuracy_ranking.emplace("StreamBP", maximalMatchingAccuracy(bp->bp_graph, original_graph, outfile));
+
+    EXPECT_GT(maximal_matching_accuracy_ranking.size(), 0);
+    for (const auto& rank: maximal_matching_accuracy_ranking) {
+        EXPECT_TRUE((rank.second >= 0.0) && (rank.second <= 1.0));
+    }
+
+    // Print the ranking
+    int index = 1;
+    outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Maximal Matching Accuracy" << endl;
+    for (const auto& rank: maximal_matching_accuracy_ranking) {
+        outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
+    }
+}

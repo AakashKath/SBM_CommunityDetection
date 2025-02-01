@@ -37,13 +37,12 @@ class HungarianAlgorithm {
         void updateLabels();
         bool extendAlternatingTree(queue<int> &bfsQueue, int &worker, int &job);
         void updateMatching(int worker, int job);
-        void printMatching();
 
     public:
         HungarianAlgorithm(vector<vector<int>> costs);
         ~HungarianAlgorithm();
 
-        int solveAssignmentProblem();
+        int solveAssignmentProblem(vector<int> &assignment);
 };
 
 #endif // HUNGARIAN_ALGORITHM_H

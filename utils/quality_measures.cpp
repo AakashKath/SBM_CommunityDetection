@@ -412,3 +412,51 @@ double edgeClassificationAccuracy(Graph& predicted_graph, Graph& original_graph)
 
     return static_cast<double>(weighted_correct_count) / (2.0 * predicted_graph.getTotalEdges());
 }
+
+double maximalMatchingAccuracy(Graph& predicted_graph, Graph& original_graph, ofstream& outfile, string title) {
+    vector<vector<int>> cost_matrix;
+    vector<set<int>> original_partition, predicted_partition;
+    for (const auto& pair: predicted_graph.getCommunities()) {
+        predicted_partition.push_back(pair.second);
+    }
+    for (const auto& pair: original_graph.getCommunities()) {
+        original_partition.push_back(pair.second);
+    }
+
+    // Calculate cost matrix
+    for (const auto& row_comm: original_partition) {
+        vector<int> row_cost;
+        for (const auto& col_comm: predicted_partition) {
+            vector<int> intersection;
+            set_intersection(
+                row_comm.begin(), row_comm.end(),
+                col_comm.begin(), col_comm.end(),
+                back_inserter(intersection)
+            );
+            row_cost.push_back(intersection.size());
+        }
+        cost_matrix.push_back(row_cost);
+    }
+
+    vector<int> assignment;
+    HungarianAlgorithm hun(cost_matrix);
+    int max_cost = hun.solveAssignmentProblem(assignment);
+
+    outfile << "Maximal Matching: Original Partition vs " << title << " Partition" << endl;
+    for (int i = 0; i < original_partition.size(); ++i) {
+        outfile << "{";
+        for (auto it = original_partition[i].begin(); it != original_partition[i].end(); ++it) {
+            if (it != original_partition[i].begin()) outfile << ", ";
+            outfile << *it;
+        }
+        outfile << "} vs {";
+        for (auto it = predicted_partition[assignment[i]].begin(); it != predicted_partition[assignment[i]].end(); ++it) {
+            if (it != predicted_partition[assignment[i]].begin()) outfile << ", ";
+            outfile << *it;
+        }
+        outfile << "}" << endl;
+    }
+    outfile << endl;
+
+    return max_cost / original_graph.nodes.size();
+}
