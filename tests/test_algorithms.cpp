@@ -277,20 +277,20 @@ TEST_F(InitConf, EmbeddednessTest) {
 }
 
 // Also called MoveTest, determines minimum number of nodes that needs to moved to different community to get same partition
-TEST_F(InitConf, SetDifferenceAccuracyTest) {
-    unordered_map<string, double> set_difference_accuracy_ranking;
-    set_difference_accuracy_ranking.emplace("DCD", setDifferenceAccuracy(dcd->c_ll, community_partition, outfile));
-    set_difference_accuracy_ranking.emplace("StreamBP", setDifferenceAccuracy(bp->bp_graph, community_partition, outfile));
+TEST_F(InitConf, NodeOverlapAccuracyTest) {
+    unordered_map<string, double> node_overlap_accuracy_ranking;
+    node_overlap_accuracy_ranking.emplace("DCD", nodeOverlapAccuracy(dcd->c_ll, community_partition, outfile));
+    node_overlap_accuracy_ranking.emplace("StreamBP", nodeOverlapAccuracy(bp->bp_graph, community_partition, outfile));
 
-    EXPECT_GT(set_difference_accuracy_ranking.size(), 0);
-    for (const auto& rank: set_difference_accuracy_ranking) {
+    EXPECT_GT(node_overlap_accuracy_ranking.size(), 0);
+    for (const auto& rank: node_overlap_accuracy_ranking) {
         EXPECT_TRUE((rank.second >= 0.0) && (rank.second <= 1.0));
     }
 
     // Print the ranking
     int index = 1;
-    outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Set Difference Accuracy" << endl;
-    for (const auto& rank: set_difference_accuracy_ranking) {
+    outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Node Overlap Accuracy" << endl;
+    for (const auto& rank: node_overlap_accuracy_ranking) {
         outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
     }
 }

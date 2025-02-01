@@ -23,7 +23,7 @@ double loglikelihood(const Graph& graph, const Graph& edgeGraph);
 double embeddedness(const Graph& graph);
 bool get_cpu_times(size_t &idle_time, size_t &total_time);
 vector<size_t> get_cpu_times();
-double setDifferenceAccuracy(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile, string title = "");
+double nodeOverlapAccuracy(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile, string title = "");
 double maxJaccardSum(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile, string title = "Predicted");
 double edgeClassificationAccuracy(Graph& predicted_graph, Graph& original_graph);
 

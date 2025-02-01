@@ -254,22 +254,22 @@ void run_test_script(bool draw_graphs) {
         outfile << endl;
 
         // Print set difference accuracy ranking
-        unordered_map<string, double> set_difference_accuracy_ranking;
+        unordered_map<string, double> node_overlap_accuracy_ranking;
         if (include_dcd) {
-            set_difference_accuracy_ranking.emplace("DCD", setDifferenceAccuracy(dcd->c_ll, community_partition, outfile, "DCD"));
+            node_overlap_accuracy_ranking.emplace("DCD", nodeOverlapAccuracy(dcd->c_ll, community_partition, outfile, "DCD"));
         }
         if (include_streambp) {
-            set_difference_accuracy_ranking.emplace("StreamBP", setDifferenceAccuracy(bp->bp_graph, community_partition, outfile, "StreamBP"));
+            node_overlap_accuracy_ranking.emplace("StreamBP", nodeOverlapAccuracy(bp->bp_graph, community_partition, outfile, "StreamBP"));
         }
         if (include_acd) {
-            set_difference_accuracy_ranking.emplace("ACD", setDifferenceAccuracy(acd->acd_graph, community_partition, outfile, "ACD"));
+            node_overlap_accuracy_ranking.emplace("ACD", nodeOverlapAccuracy(acd->acd_graph, community_partition, outfile, "ACD"));
         }
         if (include_ilp) {
-            set_difference_accuracy_ranking.emplace("ILP", setDifferenceAccuracy(ip_solver->ip_graph, community_partition, outfile, "ILP"));
+            node_overlap_accuracy_ranking.emplace("ILP", nodeOverlapAccuracy(ip_solver->ip_graph, community_partition, outfile, "ILP"));
         }
         index = 1;
         outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Accuracy" << endl;
-        for (const auto& rank: set_difference_accuracy_ranking) {
+        for (const auto& rank: node_overlap_accuracy_ranking) {
             outfile << left << setw(6) << index++ << setw(20) << rank.first << setprecision(4) << rank.second << endl;
         }
         outfile << endl;

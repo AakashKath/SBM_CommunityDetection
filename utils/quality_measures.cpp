@@ -332,7 +332,7 @@ double embeddedness(const Graph& graph) {
     return total_embeddedness;
 }
 
-double setDifferenceAccuracy(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile, string title) {
+double nodeOverlapAccuracy(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile, string title) {
     int correct_count = 0;
     unordered_map<int, set<int>> predicted_labels = graph.getCommunities();
     // Convert map values to a vector of sets
