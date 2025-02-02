@@ -318,16 +318,16 @@ void run_test_script(bool draw_graphs) {
         // Print maximal matching accuracy ranking
         unordered_map<string, double> maximal_matching_accuracy_ranking;
         if (include_dcd) {
-            maximal_matching_accuracy_ranking.emplace("DCD", maximalMatchingAccuracy(dcd->c_ll, sbm.sbm_graph, outfile));
+            maximal_matching_accuracy_ranking.emplace("DCD", maximalMatchingAccuracy(dcd->c_ll, sbm.sbm_graph, outfile, "DCD"));
         }
         if (include_streambp) {
-            maximal_matching_accuracy_ranking.emplace("StreamBP", maximalMatchingAccuracy(bp->bp_graph, sbm.sbm_graph, outfile));
+            maximal_matching_accuracy_ranking.emplace("StreamBP", maximalMatchingAccuracy(bp->bp_graph, sbm.sbm_graph, outfile, "StreamBP"));
         }
         if (include_acd) {
-            maximal_matching_accuracy_ranking.emplace("ACD", maximalMatchingAccuracy(acd->acd_graph, sbm.sbm_graph, outfile));
+            maximal_matching_accuracy_ranking.emplace("ACD", maximalMatchingAccuracy(acd->acd_graph, sbm.sbm_graph, outfile, "ACD"));
         }
         if (include_ilp) {
-            maximal_matching_accuracy_ranking.emplace("ILP", maximalMatchingAccuracy(ip_solver->ip_graph, sbm.sbm_graph, outfile));
+            maximal_matching_accuracy_ranking.emplace("ILP", maximalMatchingAccuracy(ip_solver->ip_graph, sbm.sbm_graph, outfile, "ILP"));
         }
         index = 1;
         outfile << left << setw(6) << "Rank" << setw(20) << "Algorithm Name" << "Maximal matching Accuracy" << endl;
