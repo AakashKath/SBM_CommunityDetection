@@ -21,7 +21,8 @@ class IPSolver {
         int total_edges;
         int numberCommunities;
 
-        void solveIP();
+        // Stop when gap <= 10%
+        void solveIP(double gap_threshold = 0.1);
         void addReflexivityConstraints(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv);
         void addSymmetryConstraints(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv);
         void addTransitivityConstraints(MPSolver* solver, unordered_map<string, MPVariable*>& Xuv);
