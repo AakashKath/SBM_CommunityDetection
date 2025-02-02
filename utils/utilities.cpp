@@ -139,3 +139,13 @@ double newmansModularity_(const Graph& graph, bool useSplitPenality, bool useDen
 
     return modularity;
 }
+
+vector<string> splitString(const string& str, char delimiter) {
+    vector<string> tokens;
+    string token;
+    istringstream tokenStream(str);
+    while (getline(tokenStream, token, delimiter)) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}

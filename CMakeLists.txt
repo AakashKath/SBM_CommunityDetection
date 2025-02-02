@@ -23,11 +23,13 @@ file(GLOB SRC_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 list(REMOVE_ITEM SRC_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 file(GLOB UTILS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/utils/*.cpp)
 file(GLOB TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp)
+file(GLOB SCRIPTS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/scripts/*.cpp)
 
 # Combine all source files into one list
 set(COMMON_SOURCES
     ${SRC_SOURCES}
     ${UTILS_SOURCES}
+    ${SCRIPTS_SOURCES}
 )
 
 # Find Graphviz package

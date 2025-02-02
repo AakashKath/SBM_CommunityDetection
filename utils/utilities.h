@@ -6,6 +6,7 @@
 #include "heap_and_map.h"
 #include "src/graph.h"
 #include <unordered_set>
+#include <filesystem>
 
 using namespace std;
 
@@ -29,5 +30,6 @@ double newmansModularity(const Graph& graph);
 double modularityContributionByCommunity(const Community& comm, int total_edges);
 double getModularity(int e_in, int e_out, int total_edges);
 double newmansModularity_(const Graph& graph, bool useSplitPenality = false, bool useDensity = false);
+vector<string> splitString(const string& str, char delimiter);
 
 #endif // UTILITIES_H

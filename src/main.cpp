@@ -4,7 +4,7 @@
 #include "belief_propagation.h"
 #include "approximate_community_detection.h"
 #include "ip_solver.h"
-#include "test_script.h"
+#include "scripts/overall_run.h"
 
 using namespace std;
 
@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
 
     if (test_script) {
         // Run the test script
-        run_test_script(draw_graphs);
+        run_all_algorithms(draw_graphs);
         return 0;
     }
 

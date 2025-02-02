@@ -1,16 +1,6 @@
-#include "test_script.h"
+#include "overall_run.h"
 
-vector<string> splitString(const string& str, char delimiter) {
-    vector<string> tokens;
-    string token;
-    istringstream tokenStream(str);
-    while (getline(tokenStream, token, delimiter)) {
-        tokens.push_back(token);
-    }
-    return tokens;
-}
-
-void run_test_script(bool draw_graphs) {
+void run_all_algorithms(bool draw_graphs) {
     // Run the test script
     if (!filesystem::exists(TEST_DATA_DIRECTORY) || !filesystem::is_directory(TEST_DATA_DIRECTORY)) {
         cerr << "Test data directory not found. Please check the path." << endl;

@@ -7,12 +7,11 @@
 #include "belief_propagation.h"
 #include "approximate_community_detection.h"
 #include "ip_solver.h"
-#include <filesystem>
 #include <fstream>
+#include "utils/utilities.h"
 
 using namespace std;
 
-void run_test_script(bool draw_graphs = false);
-vector<string> splitString(const string& str, char delimiter);
+void run_all_algorithms(bool draw_graphs = false);
 
 #endif // TEST_SCRIPT_H
