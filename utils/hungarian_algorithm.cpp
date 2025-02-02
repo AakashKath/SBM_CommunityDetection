@@ -1,8 +1,18 @@
 #include "hungarian_algorithm.h"
 
 HungarianAlgorithm::HungarianAlgorithm(vector<vector<int>> costs): costMatrix(costs) {
-    if (costs.empty() || costs[0].size() != costs.size()) {
+    if (costs.empty()) {
         throw invalid_argument("Cost matrix must be non-empty and square.");
+    }
+    if (costs[0].size() != costs.size()) {
+        int newSize = max(costs.size(), costs[0].size());
+        vector<vector<int>> squareMatrix(newSize, vector<int>(newSize, 0));
+        for (int i = 0; i < costs.size(); i++) {
+            for (int j = 0; j < costs[i].size(); j++) {
+                squareMatrix[i][j] = costs[i][j];
+            }
+        }
+        costMatrix = squareMatrix;
     }
     size = costMatrix.size();
 }

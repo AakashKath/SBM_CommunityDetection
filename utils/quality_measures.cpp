@@ -443,20 +443,26 @@ double maximalMatchingAccuracy(Graph& predicted_graph, Graph& original_graph, of
     int max_cost = hun.solveAssignmentProblem(assignment);
 
     outfile << "Maximal Matching: Original Partition vs " << title << " Partition" << endl;
-    for (int i = 0; i < original_partition.size(); ++i) {
+    int original_partition_size = original_partition.size();
+    int predicted_partition_size = predicted_partition.size();
+    for (int i = 0; i < max(original_partition_size, predicted_partition_size); ++i) {
         outfile << "{";
-        for (auto it = original_partition[i].begin(); it != original_partition[i].end(); ++it) {
-            if (it != original_partition[i].begin()) outfile << ", ";
-            outfile << *it;
+        if (i < original_partition_size) {
+            for (auto it = original_partition[i].begin(); it != original_partition[i].end(); ++it) {
+                if (it != original_partition[i].begin()) outfile << ", ";
+                outfile << *it;
+            }
         }
         outfile << "} vs {";
-        for (auto it = predicted_partition[assignment[i]].begin(); it != predicted_partition[assignment[i]].end(); ++it) {
-            if (it != predicted_partition[assignment[i]].begin()) outfile << ", ";
-            outfile << *it;
+        if (assignment[i] < predicted_partition_size) {
+            for (auto it = predicted_partition[assignment[i]].begin(); it != predicted_partition[assignment[i]].end(); ++it) {
+                if (it != predicted_partition[assignment[i]].begin()) outfile << ", ";
+                outfile << *it;
+            }
         }
         outfile << "}" << endl;
     }
     outfile << endl;
 
-    return max_cost / original_graph.nodes.size();
+    return static_cast<double>(max_cost) / static_cast<double>(original_graph.nodes.size());
 }
