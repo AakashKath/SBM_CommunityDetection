@@ -64,6 +64,10 @@ void IPSolver::solveIP() {
     // Objective function
     MPObjective* const objective = addObjective(solver.get(), Xuv);
 
+    // Set gap termination criteria
+    double gap_threshold = 0.1; // Stop when gap <= 10%
+    solver->SetSolverSpecificParametersAsString("limits/gap=" + to_string(gap_threshold));
+
     // Solve the ILP
     const MPSolver::ResultStatus result_status = solver->Solve();
 
