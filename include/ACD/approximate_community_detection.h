@@ -17,6 +17,7 @@ class ApproximateCommunityDetection {
         int communityCount;
         int totalEdges;
         mt19937 gen;
+        int stopBefore;
 
         void initializePartition();
         void createCommunities();
@@ -35,7 +36,7 @@ class ApproximateCommunityDetection {
     public:
         Graph acd_graph;
 
-        ApproximateCommunityDetection(Graph graph, int communityCount, vector<pair<int, int>> addedEdges, vector<pair<int, int>> removedEdges);
+        ApproximateCommunityDetection(Graph graph, int communityCount, vector<pair<int, int>> addedEdges, vector<pair<int, int>> removedEdges, int stopBefore = -1, ofstream* outfile = nullptr);
         ~ApproximateCommunityDetection();
 };
 

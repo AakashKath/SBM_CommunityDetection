@@ -5,21 +5,34 @@ ApproximateCommunityDetection::ApproximateCommunityDetection(
     Graph graph,
     int communityCount,
     vector<pair<int, int>> addedEdges,
-    vector<pair<int, int>> removedEdges
+    vector<pair<int, int>> removedEdges,
+    int stopBefore,
+    ofstream* outfile
 ):
     acd_graph(graph),
     communityCount(communityCount),
     totalEdges(graph.getTotalEdges()),
-    gen(random_device{}())
+    gen(random_device{}()),
+    stopBefore(stopBefore)
 {
     // Assign nodes to random community
     initializePartition();
     createCommunities();
+    vector<set<int>> community_partition;
+    for (const auto& community: graph.getCommunities()) {
+        community_partition.push_back(community.second);
+    }
+
+    if (stopBefore == -1) {
+        stopBefore = numeric_limits<int>::infinity();
+    }
 
     // Add edges and update communities
     // TODO: Time to implement node removal functionality
+    int index = 0;
     for (const auto& [src_id, dest_id]: addedEdges) {
         auto [src_community, dest_community] = addEdge(src_id, dest_id);
+        index++;
 
         // Skip if both nodes are in the same community
         if (src_community.id == dest_community.id) {
@@ -31,6 +44,15 @@ ApproximateCommunityDetection::ApproximateCommunityDetection(
         createHeapAndMap(dest_community, src_community);
 
         run2FMAlgorithm(src_community, dest_community);
+        if (outfile) {
+            ofstream nullStream("/dev/null");
+            *outfile << index
+                // << " " << nodeOverlapAccuracy(acd_graph, community_partition, nullStream)
+                << " " << edgeClassificationAccuracy(acd_graph, graph)
+                << " " << maxJaccardSum(acd_graph, community_partition, nullStream)
+                << " " << maximalMatchingAccuracy(acd_graph, graph, nullStream) << endl;
+            nullStream.close();
+        }
     }
 
     // // FM algorithm for all the communities
@@ -240,6 +262,9 @@ void ApproximateCommunityDetection::run2FMAlgorithm(Community& comm1, Community&
                     best_comm2_nodes = main_community->nodes;
                 }
             }
+        }
+        if (frozen_node_ids.size() == (2 * stopBefore)) {
+            break;
         }
     }
 

@@ -63,15 +63,24 @@ FetchContent_Declare(
 # Enable fetching dependencies for OR-Tools
 set(BUILD_DEPS ON CACHE BOOL "Fetch and build all dependencies for OR-Tools")
 
-FetchContent_MakeAvailable(json googletest ortools)
+FetchContent_Declare(
+    matplotlib-cpp
+    GIT_REPOSITORY https://github.com/lava/matplotlib-cpp.git
+    GIT_TAG master  # Use the latest commit or a specific tag
+)
+
+FetchContent_MakeAvailable(json googletest ortools matplotlib-cpp)
+
+# Find Python and its libraries
+find_package(Python3 REQUIRED COMPONENTS Development NumPy)
 
 # Add executable target with source files
 add_executable(${LIBRARY_NAME} src/main.cpp ${COMMON_SOURCES})
 add_executable(${TEST_NAME} ${TEST_SOURCES} ${COMMON_SOURCES})
 
 # Link Graphviz libraries to your executable
-target_link_libraries(${LIBRARY_NAME} nlohmann_json ortools::ortools ${GRAPHVIZ_LIBRARIES})
-target_link_libraries(${TEST_NAME} nlohmann_json ortools::ortools gtest gtest_main ${GRAPHVIZ_LIBRARIES})
+target_link_libraries(${LIBRARY_NAME} nlohmann_json ortools::ortools Python3::Python Python3::NumPy ${GRAPHVIZ_LIBRARIES})
+target_link_libraries(${TEST_NAME} nlohmann_json ortools::ortools Python3::Python Python3::NumPy gtest gtest_main ${GRAPHVIZ_LIBRARIES})
 
 # Include directories for the library
 set(COMMON_INCLUDED_DIRECTORIES
@@ -87,8 +96,8 @@ set(COMMON_INCLUDED_DIRECTORIES
 )
 
 # Include common libraries listed above
-target_include_directories(${LIBRARY_NAME} PRIVATE ${COMMON_INCLUDED_DIRECTORIES})
-target_include_directories(${TEST_NAME} PRIVATE ${COMMON_INCLUDED_DIRECTORIES})
+target_include_directories(${LIBRARY_NAME} PRIVATE ${COMMON_INCLUDED_DIRECTORIES} ${matplotlib-cpp_SOURCE_DIR})
+target_include_directories(${TEST_NAME} PRIVATE ${COMMON_INCLUDED_DIRECTORIES} ${matplotlib-cpp_SOURCE_DIR})
 
 # Include public facing libraries
 target_include_directories(${LIBRARY_NAME} PUBLIC
