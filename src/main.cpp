@@ -5,6 +5,7 @@
 #include "approximate_community_detection.h"
 #include "ip_solver.h"
 #include "scripts/overall_run.h"
+#include "scripts/self_run.h"
 
 using namespace std;
 
@@ -21,6 +22,7 @@ int main(int argc, char* argv[]) {
     string filename = "default.json";
     bool test_script = false;
     bool draw_graphs = false;
+    bool self_script = false;
 
     // Parse command-line arguments
     for (int i = 1; i < argc; ++i) {
@@ -34,6 +36,8 @@ int main(int argc, char* argv[]) {
             }
         } else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--test_script") == 0) {
             test_script = true;
+        } else if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--self_script") == 0) {
+            self_script = true;
         } else if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--draw_graphs") == 0) {
             draw_graphs = true;
         } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
@@ -47,8 +51,14 @@ int main(int argc, char* argv[]) {
     }
 
     if (test_script) {
-        // Run the test script
+        // Run the overall script
         run_all_algorithms(draw_graphs);
+        return 0;
+    }
+
+    if (self_script) {
+        // Run the self run script
+        run_against_self();
         return 0;
     }
 
