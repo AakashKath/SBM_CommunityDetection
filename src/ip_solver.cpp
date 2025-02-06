@@ -66,6 +66,7 @@ void IPSolver::solveIP(double gap_threshold) {
 
     // Set gap termination criteria
     solver->SetSolverSpecificParametersAsString("limits/gap=" + to_string(gap_threshold));
+    solver->EnableOutput();
 
     // Solve the ILP
     const MPSolver::ResultStatus result_status = solver->Solve();
