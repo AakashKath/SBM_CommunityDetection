@@ -466,3 +466,45 @@ double maximalMatchingAccuracy(Graph& predicted_graph, Graph& original_graph, of
 
     return static_cast<double>(max_cost) / static_cast<double>(original_graph.nodes.size());
 }
+
+double edgeClassificationTheoreticalAccuracy(
+    Graph predicted_graph,
+    Graph original_graph,
+    int number_communities,
+    double intra_community_edge_probability,
+    double inter_community_edge_probability
+) {
+    vector<set<int>> original_partition, predicted_partition;
+    for (const auto& community : predicted_graph.getCommunities()) {
+        predicted_partition.push_back(community.second);
+    }
+    for (const auto& community : original_graph.getCommunities()) {
+        original_partition.push_back(community.second);
+    }
+
+    vector<int> subset_sizes;
+    for (const auto& pp: predicted_partition) {
+        for (const auto& op: original_partition) {
+            vector<int> intersection;
+            set_intersection(pp.begin(), pp.end(), op.begin(), op.end(), back_inserter(intersection));
+            subset_sizes.push_back(intersection.size());
+        }
+    }
+
+    int total_nodes = predicted_graph.nodes.size();
+    int nodes_per_community = total_nodes / number_communities;
+    int expected_in_original_in = 0;
+    int expected_out_original_in = 0;
+    for (const auto& si: subset_sizes) {
+        expected_in_original_in += (si * (si - 1)) / 2;
+        expected_out_original_in += (si * (nodes_per_community - si));
+    }
+    int expected_in_original_out = expected_out_original_in;
+    int total_edges = (total_nodes * (total_nodes - 1)) / 2;
+    int expected_out_original_out = total_edges - expected_in_original_in - expected_in_original_out - expected_out_original_in;
+
+    double error_condition_in = static_cast<double>(expected_in_original_out) / (expected_in_original_in + expected_in_original_out);
+    double error_condition_out = static_cast<double>(expected_out_original_in) / (expected_out_original_out + expected_out_original_in);
+
+    return 1.0 - (error_condition_in * intra_community_edge_probability + error_condition_out * inter_community_edge_probability);
+}

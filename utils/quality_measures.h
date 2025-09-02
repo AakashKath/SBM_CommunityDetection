@@ -28,5 +28,12 @@ double nodeOverlapAccuracy(const Graph& graph, vector<set<int>> original_partiti
 double maxJaccardSum(const Graph& graph, vector<set<int>> original_partition, ofstream& outfile, string title = "Predicted");
 double edgeClassificationAccuracy(Graph& predicted_graph, Graph& original_graph);
 double maximalMatchingAccuracy(Graph& predicted_graph, Graph& original_graph, ofstream& outfile, string title = "Predicted");
+double edgeClassificationTheoreticalAccuracy(
+    Graph predicted_graph,
+    Graph original_graph,
+    int number_communities,
+    double intra_community_edge_probability,
+    double inter_community_edge_probability
+);
 
 #endif // QUALITY_MEASURES_H
