@@ -6,11 +6,24 @@ check_and_install() {
     local MANUAL_PATHS=("/usr/local/bin" "/opt/bin")
 
     if [ "$PKG_NAME" == "cmake" ]; then
+        local REQUIRED_CMAKE_VERSION="3.28.0"
+
         # Special handling for cmake
         if command -v cmake > /dev/null 2>&1; then
-            echo "cmake is already installed."
+            local INSTALLED_CMAKE_VERSION
+            INSTALLED_CMAKE_VERSION=$(cmake --version | head -n1 | awk '{print $3}')
+
+            if dpkg --compare-versions "$INSTALLED_CMAKE_VERSION" ge "$REQUIRED_CMAKE_VERSION"; then
+                echo "cmake $INSTALLED_CMAKE_VERSION is already installed."
+                return
+            fi
+
+            echo "cmake $INSTALLED_CMAKE_VERSION is installed but $REQUIRED_CMAKE_VERSION or newer is required. Installing manually..."
         else
             echo "cmake is not installed. Installing manually..."
+        fi
+
+        if ! command -v cmake > /dev/null 2>&1 || ! dpkg --compare-versions "$(cmake --version | head -n1 | awk '{print $3}')" ge "$REQUIRED_CMAKE_VERSION"; then
             wget https://github.com/Kitware/CMake/releases/download/v3.30.2/cmake-3.30.2.tar.gz
             tar -xzvf cmake-3.30.2.tar.gz
             cd cmake-3.30.2

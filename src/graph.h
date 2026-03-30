@@ -19,13 +19,15 @@ class Node {
         int label;
         int offset;
         int degree;
-        // TODO: need to store only address, all edge info will be stored in a very long list
         vector<pair<Node*, int>> edgeList; // {dest_address, weight}
         unordered_map<int, vector<double>> messages;
+        unordered_map<int, size_t> edgeIndex;
 
         Node(int id, int label = -1);
         ~Node();
         void addEdge(Node* destination, int edgeWeight = 1);
+        int getEdgeWeight(int destinationId) const;
+        bool removeEdge(int destinationId);
 };
 
 class Graph {

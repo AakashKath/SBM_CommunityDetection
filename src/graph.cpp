@@ -5,7 +5,7 @@
 #include <graphviz/gvc.h>
 #include <map>
 
-Node::Node(int id, int label): id(id), label(label), offset(-1), edgeList{}, messages{}, degree(0) {}
+Node::Node(int id, int label): id(id), label(label), offset(-1), degree(0), edgeList{}, messages{}, edgeIndex{} {}
 
 Node::~Node() {
     // Nothing to clean
@@ -17,23 +17,49 @@ void Node::addEdge(Node* destination, int edgeWeight) {
         return;
     }
 
-    auto it = find_if(edgeList.begin(), edgeList.end(),
-                [&](const pair<Node*, int>& edge) {
-                    return edge.first->id == destination->id;
-                });
-    if (it != edgeList.end()) {
-        it->second += edgeWeight;
+    auto it = edgeIndex.find(destination->id);
+    if (it != edgeIndex.end()) {
+        edgeList[it->second].second += edgeWeight;
     } else {
+        edgeIndex[destination->id] = edgeList.size();
         edgeList.emplace_back(destination, edgeWeight);
     }
     degree += edgeWeight;
 }
 
+int Node::getEdgeWeight(int destinationId) const {
+    auto it = edgeIndex.find(destinationId);
+    if (it == edgeIndex.end()) {
+        return 0;
+    }
+    return edgeList[it->second].second;
+}
+
+bool Node::removeEdge(int destinationId) {
+    auto it = edgeIndex.find(destinationId);
+    if (it == edgeIndex.end()) {
+        return false;
+    }
+
+    size_t removedIndex = it->second;
+    degree -= edgeList[removedIndex].second;
+
+    if (removedIndex != edgeList.size() - 1) {
+        edgeList[removedIndex] = edgeList.back();
+        edgeIndex[edgeList[removedIndex].first->id] = removedIndex;
+    }
+
+    edgeList.pop_back();
+    edgeIndex.erase(it);
+    return true;
+}
+
 // Constructor to initialize graph with a certain number of nodes
 Graph::Graph(int numberNodes) {
+    nodes.reserve(numberNodes);
+    id_to_index_mapping.reserve(numberNodes);
     for (int i = 0; i < numberNodes; ++i) {
         auto node = make_unique<Node>(i, i);
-        Node* nodePtr = node.get();
         nodes.push_back(move(node));
         id_to_index_mapping.emplace(i, i);
     }
@@ -59,10 +85,14 @@ Graph& Graph::operator=(Graph&& other) noexcept {
 
 // Copy Constructor
 Graph::Graph(const Graph& other) {
+    nodes.reserve(other.nodes.size());
+    id_to_index_mapping.reserve(other.id_to_index_mapping.size());
+
     // Deep copy each node
     for (const auto& node : other.nodes) {
         auto newNode = make_unique<Node>(node->id, node->label);
         newNode->offset = node->offset;
+        newNode->degree = node->degree;
         newNode->messages = node->messages;
         nodes.push_back(move(newNode));
     }
@@ -78,6 +108,7 @@ Graph::Graph(const Graph& other) {
             Node* newSrcNode = getNode(srcId);
             Node* newDestNode = getNode(destId);
             if (newSrcNode && newDestNode) {
+                newSrcNode->edgeIndex[destId] = newSrcNode->edgeList.size();
                 newSrcNode->edgeList.emplace_back(newDestNode, edgeWeight);
             }
         }
@@ -90,11 +121,14 @@ Graph& Graph::operator=(const Graph& other) {
         // Clear existing nodes and mapping
         nodes.clear();
         id_to_index_mapping.clear();
+        nodes.reserve(other.nodes.size());
+        id_to_index_mapping.reserve(other.id_to_index_mapping.size());
 
         // Deep copy each node
         for (const auto& node : other.nodes) {
             auto newNode = make_unique<Node>(node->id, node->label);
             newNode->offset = node->offset;
+            newNode->degree = node->degree;
             newNode->messages = node->messages;
             nodes.push_back(move(newNode));
         }
@@ -110,6 +144,7 @@ Graph& Graph::operator=(const Graph& other) {
                 Node* newSrcNode = getNode(srcId);
                 Node* newDestNode = getNode(destId);
                 if (newSrcNode && newDestNode) {
+                    newSrcNode->edgeIndex[destId] = newSrcNode->edgeList.size();
                     newSrcNode->edgeList.emplace_back(newDestNode, edgeWeight);
                 }
             }
@@ -161,7 +196,7 @@ void Graph::draw(const string &filepath) {
             Agnode_t *agnode_dest = agnode_map[dest];
             Agedge_t *ag_edge = agedge(g, agnode_src, agnode_dest, NULL, 1);
 
-            string edge_color = getEdgeColor(node->label, nodes[dest]->label);
+            string edge_color = getEdgeColor(node->label, edge.first->label);
 
             // Set edge color
             agsafeset(ag_edge, const_cast<char*>("color"), const_cast<char*>(edge_color.c_str()), const_cast<char*>(""));
@@ -237,32 +272,17 @@ void Graph::addUndirectedEdge(Node* srcNode, Node* destNode, int edgeWeight) {
 void Graph::addUndirectedEdge(int srcNodeId, int destNodeId, int edgeWeight) {
     Node* srcNode = getNode(srcNodeId);
     Node* destNode = getNode(destNodeId);
-    addUndirectedEdge(srcNode, destNode);
+    addUndirectedEdge(srcNode, destNode, edgeWeight);
 }
 
 int Graph::getEdgeWeight(int srcNodeId, int destNodeId) {
     Node* src = getNode(srcNodeId);
-    auto it = find_if(src->edgeList.begin(), src->edgeList.end(),
-                [&](const pair<Node*, int>& edge) {
-                    return edge.first->id == destNodeId;
-                });
-    if (it == src->edgeList.end()) {
-        return 0;
-    }
-    return it->second;
+    return src->getEdgeWeight(destNodeId);
 }
 
 void Graph::removeEdge(int srcNodeId, int destNodeId) {
     Node* src = getNode(srcNodeId);
-    auto it = find_if(src->edgeList.begin(), src->edgeList.end(),
-                [&](const pair<Node*, int>& edge) {
-                    return edge.first->id == destNodeId;
-                });
-
-    if (it != src->edgeList.end()) {
-        src->degree -= it->second;
-        src->edgeList.erase(it);
-    }
+    src->removeEdge(destNodeId);
 }
 
 void Graph::removeUndirectedEdge(int srcNodeId, int destNodeId) {
@@ -276,7 +296,6 @@ void Graph::removeUndirectedEdge(int srcNodeId, int destNodeId) {
 void Graph::addNode(int nodeId, int nodeLabel) {
     // Create node and push it to the node queue
     auto node = make_unique<Node>(nodeId, nodeLabel);
-    Node* nodePtr = node.get();
     nodes.push_back(move(node));
 
     // Update mappings
